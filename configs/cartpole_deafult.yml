@@ -1,0 +1,36 @@
+# Default configuration (balanced)
+default:
+  env_name: 'CartPole-v1'
+  seed: 42
+  
+  # Phase 1: Entropy Warmup
+  n_trajectories: 20          # Number of warmup episodes
+  segment_length: 50          # Trajectory segment length
+  
+  # Phase 2: Active Learning
+  n_bootstrap: 5              # Random queries before active loop
+  n_queries: 20               # Total active learning iterations
+  pool_size: 20               # Candidate pool size per query
+  update_freq: 10             # Retrain ensemble every N iterations
+  beta: 3.0                   # UCB/LCB confidence width (3σ = 99.7%)
+  
+  # Ensemble
+  ensemble_size: 3            # Number of models in ensemble
+  hidden_dim: 256             # Hidden layer size
+  lr: 3e-4                    # Learning rate
+  weight_decay: 1e-4          # L2 regularization
+  
+  # Phase 3: Policy Learning
+  sac_steps: 2000             # SAC training steps
+  sac_lr: 3e-4                # SAC learning rate
+  gamma: 0.99                 # Discount factor
+  tau: 0.005                  # Target network update rate
+  alpha: 0.2                  # Entropy coefficient
+  
+  # Storage
+  buffer_capacity: 10000      # Trajectory buffer size
+
+min_warmup_reward: 50.0              # CartPole-specific quality threshold
+max_defender_uncertainty: 1.5        # Universal threshold
+exploration_epsilon: 0.1             # 10% forced exploration
+label_smoothing: 0.05 

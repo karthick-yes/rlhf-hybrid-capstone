@@ -1,0 +1,29 @@
+[project]
+name = "rlhf-hybrid-capstone"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = "==3.10.*"
+dependencies = [
+    "gymnasium>=1.2.2",
+    "matplotlib>=3.10.7",
+    "metaworld>=3.0.0",
+    "networkx>=3.4.2",
+    "numpy>=2.2.6",
+    "pyyaml>=6.0.3",
+    "scikit-learn>=1.7.2",
+    "seaborn>=0.13.2",
+    "tensorboard>=2.20.0",
+    "torch>=2.5.1",
+    "torchvision>=0.20.1",
+    "tqdm>=4.67.1",
+]
+
+[[tool.uv.index]]
+name = "pytorch-cu121"
+url = "https://download.pytorch.org/whl/cu121"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu121" }
+torchvision = { index = "pytorch-cu121" }

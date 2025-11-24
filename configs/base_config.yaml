@@ -1,0 +1,26 @@
+# Base configuration for laptop/CartPole experiments
+
+# Environment
+state_dim: 4
+action_dim: 1
+
+# Ensemble
+ensemble_size: 5
+lr: 0.0003
+hidden_dim: 256
+
+# Active Learning
+beta: 3.0              # UCB/LCB confidence width
+pool_size: 50          # Candidates per iteration
+update_freq: 10        # Retrain ensemble every N queries
+
+# Experiment
+n_trajectories: 100    # Initial buffer size
+n_queries: 50          # Human query budget
+buffer_capacity: 10000
+
+# Oracle
+oracle_noise: 0.0      # Noise std for simulated human
+
+# Misc
+seed: 42

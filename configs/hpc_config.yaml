@@ -1,0 +1,26 @@
+# HPC configuration for MetaWorld experiments
+
+# Environment (MetaWorld Door-Open)
+state_dim: 39
+action_dim: 4
+
+# Ensemble
+ensemble_size: 5
+lr: 0.0003
+hidden_dim: 512        # Larger network for complex tasks
+
+# Active Learning
+beta: 3.0
+pool_size: 100         # More candidates on HPC
+update_freq: 20        # Less frequent updates (more data per update)
+
+# Experiment
+n_trajectories: 500    # Larger buffer
+n_queries: 200         # More queries for complex tasks
+buffer_capacity: 50000
+
+# Oracle
+oracle_noise: 0.1      # Add some noise to simulate real humans
+
+# Misc
+seed: 42

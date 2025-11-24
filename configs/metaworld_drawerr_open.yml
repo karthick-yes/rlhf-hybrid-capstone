@@ -1,0 +1,19 @@
+metaworld_drawer_open:
+  env_name: 'metaworld-drawer-open'
+  
+  # Similar to door-open but slightly harder
+  segment_length: 100
+  n_trajectories: 40          # More warmup (harder task)
+  
+  n_bootstrap: 10             # More bootstrap (establish baseline)
+  n_queries: 100              # MANY queries (complex preferences)
+  pool_size: 30
+  beta: 3.5                   # Slightly conservative (noisy task)
+  update_freq: 15
+  
+  ensemble_size: 5
+  hidden_dim: 512
+  lr: 1e-4
+  
+  sac_steps: 15000
+  buffer_capacity: 100000

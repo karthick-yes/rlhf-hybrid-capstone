@@ -1,0 +1,36 @@
+# CartPole Conservative Configuration
+env_name: CartPole-v1
+state_dim: 4
+action_dim: 1
+
+
+beta: 3.0
+n_trajectories: 50
+n_queries: 100
+n_bootstrap: 10
+pool_size: 20
+update_freq: 10
+
+# Model Parameters
+ensemble_size: 5
+hidden_dim: 256
+lr: 3e-4              
+weight_decay: 1e-4    
+
+# SAC Parameters
+sac_steps: 20000
+gamma: 0.99           
+tau: 0.005            
+alpha: 0.2            
+
+# Buffer
+segment_length: 50
+buffer_capacity: 100000
+
+# Stability
+min_warmup_reward: 30.0
+max_defender_uncertainty: 1.5
+exploration_epsilon: 0.1
+
+# Reproducibility
+seed: 42

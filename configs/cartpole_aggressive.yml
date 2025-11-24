@@ -1,0 +1,17 @@
+cartpole_aggressive:
+  env_name: 'CartPole-v1'
+  
+  # Goal: Maximize auto-labeling to reduce human queries
+  # Trade-off: May generate some incorrect pseudo-labels
+  
+  beta: 2.0                   # NARROWER intervals (95% confidence)
+  n_bootstrap: 5
+  pool_size: 30               # LARGER pool (more candidates)
+  update_freq: 10
+  
+  # Standard warmup
+  n_trajectories: 20
+  
+  # Smaller ensemble (faster)
+  ensemble_size: 3
+  hidden_dim: 128

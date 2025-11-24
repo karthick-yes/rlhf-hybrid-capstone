@@ -1,0 +1,10 @@
+# Ablation: Random challenger selection (no active dethroning)
+
+state_dim: 4
+action_dim: 1
+ensemble_size: 5
+beta: 3.0
+pool_size: 50
+n_queries: 50
+
+use_active_dethroning: false  # Select random uncertain candidate

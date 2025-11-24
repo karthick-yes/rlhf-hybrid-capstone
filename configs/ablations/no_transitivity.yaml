@@ -1,0 +1,12 @@
+# Ablation: Disable transitive closure
+
+# Inherits from base_config.yaml, but override:
+state_dim: 4
+action_dim: 1
+ensemble_size: 5
+beta: 3.0
+pool_size: 50
+n_queries: 50
+
+# ABLATION FLAG
+use_transitivity: false  # Disable transitive closure

@@ -1,0 +1,10 @@
+# Ablation: Disable UCB/LCB (query everything)
+
+state_dim: 4
+action_dim: 1
+ensemble_size: 5
+beta: 100.0            # Very large beta → intervals never overlap → no auto-labels
+pool_size: 50
+n_queries: 50
+
+use_ucb_lcb: false

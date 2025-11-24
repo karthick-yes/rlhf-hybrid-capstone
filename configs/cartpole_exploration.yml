@@ -1,0 +1,11 @@
+cartpole_exploration:
+  env_name: 'CartPole-v1'
+  
+  # Goal: Collect more diverse trajectories before querying
+  # Rationale: CartPole warmup gives very similar trajs
+  
+  n_trajectories: 50          # MORE warmup episodes
+  n_bootstrap: 3              # FEWER bootstrap (let active learning do work)
+  pool_size: 30
+  beta: 3.0
+  update_freq: 15             # LESS frequent updates (explore more first)
