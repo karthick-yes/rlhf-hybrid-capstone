@@ -1,4 +1,3 @@
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -17,7 +16,7 @@ class RewardNetwork(nn.Module):
             nn.LeakyReLU(),
             nn.Linear(hidden_dim, hidden_dim),
             nn.LeakyReLU(),
-            nn.Linear(hidden_dim, 1),
+            nn.Linear(hidden_dim, 1)
         )
     
     def forward(self, state, action):
@@ -28,7 +27,6 @@ class RewardNetwork(nn.Module):
         Returns:
             reward: Tensor [Batch, 1]
         """
-        # Ensure state and action have compatible shapes
         if state.dim() == 1:
             state = state.unsqueeze(0)
         if action.dim() == 1:
@@ -57,7 +55,6 @@ class RewardEnsemble:
             config: Dict with 'ensemble_size', 'lr', etc. (optional)
             device: 'cpu', 'cuda', or None (auto-detect)
         """
-        # Default config
         if config is None:
             config = {}
         
@@ -66,7 +63,6 @@ class RewardEnsemble:
         self.weight_decay = float(config.get('weight_decay', 1e-4))
         self.hidden_dim = config.get('hidden_dim', 256)
         
-        # Device handling: auto-detect if not specified
         if device is None:
             self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         else:
@@ -74,13 +70,12 @@ class RewardEnsemble:
         
         print(f"[RewardEnsemble] Using device: {self.device}")
         
-        # Create ensemble
         self.models = []
         self.optimizers = []
         
         for i in range(self.K):
             model = RewardNetwork(state_dim, action_dim, self.hidden_dim)
-            model = model.to(self.device)  # Move to device
+            model = model.to(self.device)
             
             optimizer = optim.Adam(
                 model.parameters(),
@@ -115,7 +110,6 @@ class RewardEnsemble:
             reward: Tensor [Batch, 1]
         """
         if states.dim() == 3:  # Trajectory segment [Batch, Time, Dim]
-            # Process each timestep and sum
             batch_size, seq_len, _ = states.shape
             rewards = []
             
@@ -123,7 +117,6 @@ class RewardEnsemble:
                 r_t = model(states[:, t, :], actions[:, t, :])
                 rewards.append(r_t)
             
-            # Sum over time: [Batch, Time, 1] -> [Batch, 1]
             cumulative = torch.stack(rewards, dim=1).sum(dim=1)
             return cumulative
         
@@ -146,14 +139,9 @@ class RewardEnsemble:
         Returns:
             avg_loss: Average loss across ensemble
         """
-        # Move to device
         s0, a0, s1, a1, labels = self._to_device(s0, a0, s1, a1, labels)
         
-        # Ensure labels are float and shaped [Batch, 1]
         labels = labels.float().unsqueeze(1) if labels.dim() == 1 else labels.float()
-        
-        #smoothing_factor = self.config.get('label_smoothing', 0.05)
-        #labels = labels * (1 - 2 * smoothing_factor) + smoothing_factor
         
         total_loss = 0.0
         criterion = nn.BCEWithLogitsLoss()
@@ -161,19 +149,16 @@ class RewardEnsemble:
         for i in range(self.K):
             self.optimizers[i].zero_grad()
             
-            # Compute cumulative rewards for both segments
             r0 = self._compute_segment_reward(self.models[i], s0, a0)
             r1 = self._compute_segment_reward(self.models[i], s1, a1)
             
             # Bradley-Terry-Luce model:
             # P(s1 > s0) = sigmoid(r1 - r0)
-            # If label=1, we want r1 > r0 (positive logit)
             logits = r1 - r0
             
             loss = criterion(logits, labels)
             loss.backward()
             
-            # Gradient clipping for stability
             torch.nn.utils.clip_grad_norm_(
                 self.models[i].parameters(),
                 max_norm=10.0
@@ -205,12 +190,10 @@ class RewardEnsemble:
                 r = self._compute_segment_reward(model, states, actions)
                 predictions.append(r)
             
-            # Stack: [K, Batch, 1]
-            predictions = torch.stack(predictions, dim=0)
+            predictions = torch.stack(predictions, dim=0)  # [K, Batch, 1]
             
-            # Compute statistics across ensemble
-            mean = predictions.mean(dim=0)  # [Batch, 1]
-            std = predictions.std(dim=0)    # [Batch, 1]
+            mean = predictions.mean(dim=0)
+            std = predictions.std(dim=0)
             
             return mean, std
     
@@ -228,7 +211,6 @@ class RewardEnsemble:
         """
         state, action = self._to_device(state, action)
         
-        # Ensure batch dimension
         if state.dim() == 1:
             state = state.unsqueeze(0)
             action = action.unsqueeze(0)
@@ -243,7 +225,7 @@ class RewardEnsemble:
                 r = model(state, action)
                 predictions.append(r)
             
-            predictions = torch.stack(predictions, dim=0)  # [K, Batch, 1]
+            predictions = torch.stack(predictions, dim=0)
             mean = predictions.mean(dim=0)
             std = predictions.std(dim=0)
             
@@ -280,15 +262,8 @@ class RewardEnsemble:
     
     def predict_uncertainty(self, state, action):
         """
-        Legacy method for backward compatibility with test files.
+        Legacy method for backward compatibility.
         Returns only std (uncertainty), not mean.
-        
-        Args:
-            state: Tensor [Batch, Time?, Dim]
-            action: Tensor [Batch, Time?, Dim]
-        
-        Returns:
-            std: Tensor [Batch, 1] - epistemic uncertainty
         """
         _, std = self.predict_segment(state, action)
         return std

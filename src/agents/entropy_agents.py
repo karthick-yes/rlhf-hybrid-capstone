@@ -312,7 +312,7 @@ class SimpleEntropySAC:
             trajectories: List of (states, actions, int_rewards, ext_rewards) tuples
             metrics: Dict with training statistics
         """
-        print(f"\n🔥 Starting PEBBLE-style Entropy Warmup ({n_episodes} episodes)...")
+        print(f"\n Starting PEBBLE-style Entropy Warmup ({n_episodes} episodes)...")
         
         trajectories = []
         metrics = {
@@ -348,7 +348,7 @@ class SimpleEntropySAC:
                       f"Avg Reward: {np.mean(recent_rewards):.3f} | "
                       f"Entropy: {np.mean(recent_entropy):.3f}")
         
-        print(f"✅ Warmup Complete: {len(trajectories)} diverse trajectories collected")
+        print(f" Warmup Complete: {len(trajectories)} diverse trajectories collected")
         print(f"   Total states in buffer: {len(self.agent.state_buffer)}")
         print(f"   Average episode length: {np.mean(metrics['episode_lengths']):.1f}\n")
         
@@ -382,7 +382,7 @@ def validate_phase1():
             action_dim=action_dim,
             action_range=action_range,
             k=5,
-            device='cpu'
+            device='gpu'
         )
         
         # Run warmup
@@ -430,7 +430,7 @@ def validate_phase1():
                 print("  → WARNING: Low state diversity")
         
         print("\n" + "="*70)
-        print("✅ PHASE 1 VALIDATION COMPLETE")
+        print("PHASE 1 VALIDATION COMPLETE")
         print("="*70 + "\n")
         
         return True

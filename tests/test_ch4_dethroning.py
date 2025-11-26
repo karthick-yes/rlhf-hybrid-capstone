@@ -91,15 +91,15 @@ def test_dethroning_sanity():
     
     plt.tight_layout()
     plt.savefig('dethroning_sanity.png', dpi=300, bbox_inches='tight')
-    print(f"\n🎨 Visualization saved: dethroning_sanity.png")
+    print(f"\nVisualization saved: dethroning_sanity.png")
     plt.close()
     
     # Pass/Fail
     print("\n" + "-"*70)
     if 0.4 <= best_p_win <= 0.6:
-        print("✅ PASS: Dethroning selects near 50-50 pairs")
+        print(" PASS: Dethroning selects near 50-50 pairs")
     else:
-        print(f"❌ FAIL: Selected P(Win)={best_p_win:.4f} not in [0.4, 0.6]")
+        print(f" FAIL: Selected P(Win)={best_p_win:.4f} not in [0.4, 0.6]")
         raise AssertionError(f"P(Win)={best_p_win:.4f} not in [0.4, 0.6]")
     print("="*70 + "\n")
 
