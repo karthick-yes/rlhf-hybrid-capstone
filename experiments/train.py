@@ -504,16 +504,16 @@ class HybridTrainer:
         print(f"   True best: {true_best_id} (GT reward: {true_rewards[true_best_id]:.1f})")
         
         if self.defender_id == true_best_id:
-            print(f"   ✓ SUCCESS: Found the true best trajectory!")
+            print(f"   SUCCESS: Found the true best trajectory!")
         else:
-            print(f"   ✗ WARNING: Defender is suboptimal (missed by {true_rewards[true_best_id] - true_rewards.get(self.defender_id, 0):.1f} reward)")
+            print(f"   WARNING: Defender is suboptimal (missed by {true_rewards[true_best_id] - true_rewards.get(self.defender_id, 0):.1f} reward)")
         
         if defender_change_count == 0:
-            print(f"   ✗ CRITICAL: Defender NEVER changed - likely stuck in local optimum!")
+            print(f"   CRITICAL: Defender NEVER changed - likely stuck in local optimum!")
         elif defender_change_count < 3:
             print(f"   WARNING: Only {defender_change_count} changes - may be under-exploring")
         else:
-            print(f"   ✓ Good exploration: {defender_change_count} defender changes")
+            print(f"   Good exploration: {defender_change_count} defender changes")
         
         print(f"{'='*70}\n")
         

@@ -130,8 +130,6 @@ class SAC:
         states = torch.FloatTensor(states).to(self.device)
         actions = torch.FloatTensor(actions).to(self.device)
         
-        # 🔧 FIX: Removed .unsqueeze(1) because buffer already provides [batch, 1] shape
-        # If we unsqueeze, we get [batch, 1, 1] which causes broadcasting errors with [batch, 1]
         rewards = torch.FloatTensor(rewards).to(self.device) 
         next_states = torch.FloatTensor(next_states).to(self.device)
         dones = torch.FloatTensor(dones).to(self.device)
