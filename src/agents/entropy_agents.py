@@ -43,6 +43,9 @@ class EntropyAgent:
         self.mean_head = nn.Linear(256, action_dim).to(device)
         self.log_std_head = nn.Linear(256, action_dim).to(device)
         
+        torch.nn.init.xavier_uniform_(self.mean_head.weight, gain=0.01)
+        torch.nn.init.constant_(self.mean_head.bias, 0)
+        
         # Initialize log_std to small values for initial exploration
         nn.init.uniform_(self.log_std_head.weight, -1e-3, 1e-3)
         nn.init.uniform_(self.log_std_head.bias, -1e-3, 1e-3)
@@ -436,7 +439,7 @@ def validate_phase1():
         return True
         
     except Exception as e:
-        print(f"\n❌ VALIDATION FAILED: {e}")
+        print(f"\n VALIDATION FAILED: {e}")
         import traceback
         traceback.print_exc()
         return False

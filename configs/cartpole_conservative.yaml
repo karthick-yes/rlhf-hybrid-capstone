@@ -1,38 +1,53 @@
-# CartPole Conservative Configuration
-env_name: CartPole-v1
+# ==================== ENVIRONMENT ====================
+env_name: 'CartPole-v1'
 state_dim: 4
-action_dim: 1
+action_dim: 1               # Continuous Proxy: Agent sees 1 dim [-1, 1]
 
+# Episode lengths
+segment_length: 50          # Query length: Clips shown for preference comparison
+max_episode_steps: 500      # Collection length: Full episode rollout limit
 
-beta: 7.0
-n_trajectories: 100
-n_queries: 100
-n_bootstrap: 10
-pool_size: 20
-update_freq: 20
-segment_length: 200  
+# ==================== DUAL-AGENT LOOP ARCHITECTURE ====================
+n_rounds: 5                 # Number of exploration-exploitation cycles
+n_queries_per_round: 20     # Human queries per active learning phase
+sac_steps_per_round: 10000   # SAC training steps per round
+sac_collection_episodes: 10 # Episodes collected by SAC (exploitation)
+entropy_collection_episodes: 10
+entropy_decay: 0.95 # Episodes collected by Entropy (exploration)
 
-# Model Parameters
-ensemble_size: 5
-hidden_dim: 256
-lr: 3e-4              
-weight_decay: 1e-4    
+# ==================== INITIAL WARMUP ====================
+n_trajectories: 100         # Initial episodes (Entropy-only exploration)
+n_bootstrap: 10             # Random queries to initialize ensemble
 
-# SAC Parameters
-sac_steps: 50000
-gamma: 0.99           
-tau: 0.005            
-alpha: 0.2            
+# ==================== ACTIVE LEARNING ====================
+beta: 3.0                   # Revert to 3.0 to encourage auto-labeling
+adaptive_beta: true         # Keep adaptive behavior
+pool_size: 20               # Candidate pool size per query iteration
+update_freq: 10             # Retrain ensemble every 10 queries
 
-# Buffer
-segment_length: 50
-buffer_capacity: 100000
+# ==================== REWARD ENSEMBLE ====================
+ensemble_size: 7            # Number of reward models in ensemble
+hidden_dim: 64              # Hidden layer size for reward networks
+lr: 0.003                   # Faster learning rate for CartPole (was 0.0002)
+weight_decay: 0.01     # L2 regularization
 
-# Stability
-min_warmup_reward: 30.0
-max_defender_uncertainty: 1.5
-exploration_epsilon: 0.3
-defender_reset_freq: 25   
-adaptive_beta: true       
-# Reproducibility
+# ==================== SAC HYPERPARAMETERS ====================
+gamma: 0.99                 # Discount factor
+tau: 0.005                  # Target network update rate
+alpha: 0.05                  # Entropy regularization
+
+# ==================== BUFFERS ====================
+buffer_capacity: 100000     # Maximum trajectory storage
+
+# ==================== SAFETY & STABILITY ====================
+min_warmup_reward: 20.0     # LOWERED: Prevent infinite loops in CartPole entropy
+max_defender_uncertainty: 50.0 # Widen beta if defender σ exceeds this
+exploration_epsilon: 0.1    # Random query probability
+defender_reset_freq: 25     # PageRank validation frequency
+std_threshold: 50.0         # NEW: Higher threshold for raw reward uncertainty
+
+# ==================== DUAL-AGENT SPECIFIC ====================
+entropy_full_buffer: true   # Knowledge sharing: true = thorough exploration
+
+# ==================== REPRODUCIBILITY ====================
 seed: 42

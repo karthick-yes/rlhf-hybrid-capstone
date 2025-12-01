@@ -12,7 +12,7 @@ class UCBLCBFilter:
     
     """
     
-    def __init__(self, beta=3.0, adaptive_beta=True):
+    def __init__(self, beta=3.0, adaptive_beta=True, std_threshold = 50.0 ):
         """
         Args:
             beta: Confidence interval width (3.0 = 99.7% under Gaussian)
@@ -20,6 +20,7 @@ class UCBLCBFilter:
         """
         self.beta = beta
         self.adaptive_beta = adaptive_beta
+        self.std_threshold = std_threshold
     
     def compute_bounds(self, mu, std, beta=None):
         """
@@ -56,10 +57,10 @@ class UCBLCBFilter:
             dethroned: bool - True if defender was dethroned
             new_defender_id: int or None - New defender if dethroned
         """
-        
-        if self.adaptive_beta and defender_std > 1.0:
-            effective_beta = self.beta * 1.0 # Widen intervals
-            print(f"   [Adaptive Beta] Defender std={defender_std:.2f} > 1.0, using beta={effective_beta:.1f}")
+        #if model is uncertain, then widen the intervalss
+        if self.adaptive_beta and defender_std > self.std_threshold:
+            effective_beta = self.beta * 2.0 # Widen intervals
+            print(f"   [Adaptive Beta] Defender std={defender_std:.2f} > {self.std_threshold:.2f}, using beta={effective_beta:.1f}")
         else:
             effective_beta = self.beta
         

@@ -36,6 +36,9 @@ class SACBufferAdapter:
         
         all_ids = trajectory_buffer.get_all_ids()
         
+        all_raw_rewards = []
+        trajectory_data = {}
+        
         for tid in all_ids:
             traj = trajectory_buffer.get_trajectory(tid)
             states = traj['states']     # Shape: [T, dim]
@@ -52,7 +55,34 @@ class SACBufferAdapter:
                 preds = torch.stack([m(s_t, a_t) for m in reward_ensemble.models])
                 # Use Mean - k * Std (LCB) for robust RL, or just Mean
                 # Using Mean for standard RLHF
-                learned_rewards = preds.mean(dim=0).cpu().numpy() # Shape: [T, 1]
+                raw_rewards = preds.mean(dim=0).cpu().numpy() # Shape: [T, 1]
+                # Normalize to [-1, 1] range
+                all_raw_rewards.append(raw_rewards)
+            trajectory_data[tid] = {
+                'states': states,
+                'actions': actions,
+                'raw_rewards': raw_rewards
+            }
+        
+        all_raw_rewards = np.concatenate(all_raw_rewards, axis=0)  # Combine ALL steps
+        reward_mean = all_raw_rewards.mean()
+        reward_std = all_raw_rewards.std() + 1e-8
+    
+        print(f"   [Adapter] Global reward stats:")
+        print(f"      Mean: {reward_mean:.2f}")
+        print(f"      Std:  {reward_std:.2f}")
+        print(f"      Min:  {all_raw_rewards.min():.2f}")
+        print(f"      Max:  {all_raw_rewards.max():.2f}")
+    
+    # ✅ PHASE 3: NORMALIZE AND FLATTEN
+        for tid in all_ids:
+            data = trajectory_data[tid]
+            states = data['states']
+            actions = data['actions']
+            raw_rewards = data['raw_rewards']
+        
+        # Normalize using GLOBAL statistics
+            learned_rewards = (raw_rewards - reward_mean) / reward_std    
             
             # --- FLATTEN LOOP ---
             T = len(states)
@@ -60,7 +90,7 @@ class SACBufferAdapter:
                 self.add(
                     states[t], 
                     actions[t], 
-                    learned_rewards[t], # The NEW learned reward
+                    learned_rewards[t,0], # The NEW learned reward
                     states[t+1], 
                     0.0 if t < T-2 else 1.0 # Simple done logic
                 )
