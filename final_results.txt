@@ -1,0 +1,802 @@
+(rlhf-hybrid-capstone) D:\rlhf-hybrid-capstone>uv run python -m experiments.train --config configs/cartpole_conservative.yaml
+Loading config from: configs/cartpole_conservative.yaml
+
+======================================================================
+DUAL-AGENT HYBRID PREFERENCE LEARNING SYSTEM
+======================================================================
+   Device: cuda
+   Environment: CartPole-v1
+   Architecture: Iterative Dual-Agent Loop
+   Beta (UCB/LCB): 3.0
+   Ensemble Size: 7
+   Training Rounds: 5
+======================================================================
+
+
+[CONFIG VERIFICATION]
+   Learning Rate (lr): 0.003
+   Beta: 3.0
+   Std Threshold: 50.0
+   Hidden Dim: 64
+   Entropy Full Buffer: True
+------------------------------
+
+[ENV CONFIG]
+   Query Length (segment_length): 50
+   Collection Length (max_episode_steps): 500
+   State Dim: 4
+   Action Dim: 1
+   Is Discrete: False
+
+[RewardEnsemble] Using device: cuda
+[RewardEnsemble] Initialized 7 models on cuda
+[INITIALIZATION COMPLETE]
+
+
+######################################################################
+######################################################################
+##  STARTING DUAL-AGENT HYBRID RLHF TRAINING
+######################################################################
+######################################################################
+
+
+======================================================================
+[PHASE 1] UNSUPERVISED WARMUP - Attempt 1
+======================================================================
+   Target Episodes: 100
+   Using: Entropy Agent (Max-Entropy Exploration)
+
+   Entropy Collection: 100 episodes, Avg Reward: 15.5, Max: 36.0, Min: 8.0, Std: 5.8                                                           
+
+   ──────────────────────────────────────────────────────────────────
+   QUALITY CHECK
+   ──────────────────────────────────────────────────────────────────
+   Mean Reward: 15.54
+   Max Reward:  36.00
+   Std Reward:  5.78
+   ──────────────────────────────────────────────────────────────────
+   ✓ Quality threshold met (36.00 >= 20.0)
+
+   Phase 1 Complete: 100 trajectories collected
+   All trajectories tagged as: Entropy
+======================================================================
+
+   Checkpoint saved: checkpoints\checkpoint_phase1_done.pt
+
+======================================================================
+[BOOTSTRAP] ENSEMBLE INITIALIZATION
+======================================================================
+   Random Queries: 10
+
+   Bootstrap  1: 28(Entropy) > 54(Entropy) | Rewards: 16.0 > 11.0
+   Bootstrap  2: 7(Entropy) > 99(Entropy) | Rewards: 28.0 > 9.0
+   Bootstrap  3: 68(Entropy) > 98(Entropy) | Rewards: 13.0 > 11.0
+   Bootstrap  4: 89(Entropy) > 28(Entropy) | Rewards: 19.0 > 16.0
+   Bootstrap  5: 1(Entropy) > 18(Entropy) | Rewards: 18.0 > 15.0
+   Bootstrap  6: 64(Entropy) > 67(Entropy) | Rewards: 13.0 > 11.0
+   Bootstrap  7: 58(Entropy) > 43(Entropy) | Rewards: 16.0 > 8.0
+   Bootstrap  8: 1(Entropy) > 51(Entropy) | Rewards: 18.0 > 9.0
+   Bootstrap  9: 15(Entropy) > 64(Entropy) | Rewards: 17.0 > 13.0
+   Bootstrap 10: 41(Entropy) > 90(Entropy) | Rewards: 21.0 > 11.0
+
+   ──────────────────────────────────────────────────────────────────
+   REWARD DISTRIBUTION
+   ──────────────────────────────────────────────────────────────────
+   Min:  8.0
+   Max:  36.0
+   Mean: 15.5
+   Std:  5.8
+   ──────────────────────────────────────────────────────────────────
+
+     WARNING: Max reward only 36.0 < 100
+   Agent may underperform due to lack of good examples
+   Consider extending warmup phase
+
+
+   Training ensemble on 10 bootstrap labels...
+   [Adapter] Relabeling buffer with learned rewards...
+   [Adapter] Global reward stats:
+      Mean: 1.47
+      Std:  0.20
+      Min:  1.15
+      Max:  2.14
+   [Adapter] Flattened into 1454 transitions for SAC.
+     Defender Updated: 97 (Entropy)
+      - Predicted Reward: 56.7
+      - True Reward:      36.0
+
+   Bootstrap Complete:
+   - Total Edges: 12
+   - Augmentation: 1.20x
+   - Human Queries: 10
+======================================================================
+
+   Initial Reward Correlation: 0.987
+
+   Checkpoint saved: checkpoints\checkpoint_bootstrap_done.pt
+
+[BASELINE EVALUATION]
+Measuring random policy performance...
+Random policy average: 9.1
+
+
+######################################################################
+##  ROUND 1 / 5
+######################################################################
+
+     Defender Updated: 97 (Entropy)
+      - Predicted Reward: 56.7
+      - True Reward:      36.0
+
+======================================================================
+[ACTIVE LEARNING] Round 1
+======================================================================
+   Queries: 20 | Pool Size: 20
+
+   Querying:  45%|█████████████████████████▏                              | 9/20 [00:31<00:26,  2.38s/query, Aug=10.4x, Auto=100%, Def=97(E)✓]   [Adapter] Relabeling buffer with learned rewards...
+   [Adapter] Global reward stats:
+      Mean: 0.86
+      Std:  0.03
+      Min:  0.79
+      Max:  0.93
+   [Adapter] Flattened into 1454 transitions for SAC.
+   Checkpoint saved: checkpoints\checkpoint_round1_iter10.pt
+   Querying:  95%|████████████████████████████████████████████████████▎  | 19/20 [03:06<00:05,  5.64s/query, Aug=11.1x, Auto=100%, Def=97(E)✓]   [Adapter] Relabeling buffer with learned rewards...
+   [Adapter] Global reward stats:
+      Mean: 1.16
+      Std:  0.03
+      Min:  1.11
+      Max:  1.21
+   [Adapter] Flattened into 1454 transitions for SAC.
+   Checkpoint saved: checkpoints\checkpoint_round1_iter20.pt
+   Querying: 100%|███████████████████████████████████████████████████████| 20/20 [05:37<00:00, 16.89s/query, Aug=11.1x, Auto=100%, Def=97(E)✓]
+
+   ──────────────────────────────────────────────────────────────────
+   ROUND 1 SUMMARY
+   ──────────────────────────────────────────────────────────────────
+   Defender Changes: 0
+   Final Defender: 97 (Entropy)
+   - Predicted: 31.7
+   - True:      36.0
+   True Best: 97 (r=36.0)
+    SUCCESS: Found the true best trajectory!
+     CRITICAL: Defender NEVER changed - likely stuck!
+
+   DUAL-AGENT BREAKDOWN:
+   - SAC Wins:        0
+   - Entropy Wins:    0
+   - SAC Auto-Reject: 0
+   - Entropy Auto-Reject: 400
+   - SAC Queries:     0
+   - Entropy Queries: 0
+   ──────────────────────────────────────────────────────────────────
+
+
+   ============================================================
+   RETRAINING ENSEMBLE
+   ============================================================
+   Training:  13%|████████▍                                                      | 4/30 [00:57<07:36, 17.55s/epoch, loss=0.0051, patience=2/3] 
+   Early stopping at epoch 5/30 (loss=0.0063)
+   Training:  13%|████████▍                                                      | 4/30 [01:29<09:39, 22.27s/epoch, loss=0.0051, patience=2/3] 
+    Ensemble Trained.
+   [Adapter] Relabeling buffer with learned rewards...
+   [Adapter] Global reward stats:
+      Mean: 1.20
+      Std:  0.02
+      Min:  1.17
+      Max:  1.24
+   [Adapter] Flattened into 1454 transitions for SAC.
+   SAC Buffer Relabeled (Size: 1454)
+
+======================================================================
+[PHASE 3] POLICY LEARNING - Round 1
+======================================================================
+   Training Steps: 10000
+   SAC Buffer Size: 1454
+
+   Training SAC: 100%|█████████████████████████████████| 10000/10000 [04:45<00:00, 34.98step/s, act_loss=-19.394, crit_loss=0.054, reward=9.4] 
+
+   Round 1 Final Performance: 9.0
+======================================================================
+
+   Checkpoint saved: checkpoints\checkpoint_round1_sac_done.pt
+
+======================================================================
+[DATA GENERATION] Round 1
+======================================================================
+
+   [1/2] SAC Collection (Exploitation)...
+   SAC Collection: 10 episodes, Avg Reward: 11.1, Max: 15.0, Min: 9.0, Std: 1.9                                                                
+
+   [2/2] Entropy Collection (Exploration)...
+   > Decay applied: 10 -> 10 episodes (Rate: 0.95)
+   Sharing SAC states with Entropy agent...
+   Entropy Collection: 10 episodes, Avg Reward: 14.5, Max: 21.0, Min: 10.0, Std: 3.5                                                           
+
+   Total Buffer Size: 120 trajectories
+======================================================================
+
+[INTERMEDIATE EVALUATION] Round 1
+   Current Performance: 9.1
+   vs Random Baseline:  9.1
+   Improvement:         1.00x
+
+   Checkpoint saved: checkpoints\checkpoint_round1_complete.pt
+
+######################################################################
+##  ROUND 2 / 5
+######################################################################
+
+     Defender Updated: 97 (Entropy)
+      - Predicted Reward: 43.5
+      - True Reward:      36.0
+
+======================================================================
+[ACTIVE LEARNING] Round 2
+======================================================================
+   Queries: 20 | Pool Size: 20
+
+   Querying:  45%|█████████████████████████▏                              | 9/20 [00:47<00:54,  4.96s/query, Aug=13.0x, Auto=100%, Def=97(E)✓]   [Adapter] Relabeling buffer with learned rewards...
+   [Adapter] Global reward stats:
+      Mean: 0.86
+      Std:  0.01
+      Min:  0.85
+      Max:  0.87
+   [Adapter] Flattened into 1690 transitions for SAC.
+   Checkpoint saved: checkpoints\checkpoint_round2_iter10.pt
+   Querying:  95%|████████████████████████████████████████████████████▎  | 19/20 [03:16<00:05,  5.62s/query, Aug=13.1x, Auto=100%, Def=97(E)✓]   [Adapter] Relabeling buffer with learned rewards...
+   [Adapter] Global reward stats:
+      Mean: 0.59
+      Std:  0.00
+      Min:  0.59
+      Max:  0.60
+   [Adapter] Flattened into 1690 transitions for SAC.
+   Checkpoint saved: checkpoints\checkpoint_round2_iter20.pt
+   Querying: 100%|███████████████████████████████████████████████████████| 20/20 [06:03<00:00, 18.16s/query, Aug=13.1x, Auto=100%, Def=97(E)✓]
+
+   ──────────────────────────────────────────────────────────────────
+   ROUND 2 SUMMARY
+   ──────────────────────────────────────────────────────────────────
+   Defender Changes: 0
+   Final Defender: 97 (Entropy)
+   - Predicted: 30.9
+   - True:      36.0
+   True Best: 97 (r=36.0)
+    SUCCESS: Found the true best trajectory!
+     CRITICAL: Defender NEVER changed - likely stuck!
+
+   DUAL-AGENT BREAKDOWN:
+   - SAC Wins:        0
+   - Entropy Wins:    0
+   - SAC Auto-Reject: 36
+   - Entropy Auto-Reject: 364
+   - SAC Queries:     0
+   - Entropy Queries: 0
+   ──────────────────────────────────────────────────────────────────
+
+
+   ============================================================
+   RETRAINING ENSEMBLE
+   ============================================================
+   Training:  27%|████████████████▊                                              | 8/30 [04:34<12:42, 34.66s/epoch, loss=0.0025, patience=2/3] 
+   Early stopping at epoch 9/30 (loss=0.0023)
+   Training:  27%|████████████████▊                                              | 8/30 [04:47<13:11, 35.99s/epoch, loss=0.0025, patience=2/3] 
+    Ensemble Trained.
+   [Adapter] Relabeling buffer with learned rewards...
+   [Adapter] Global reward stats:
+      Mean: 0.87
+      Std:  0.00
+      Min:  0.87
+      Max:  0.87
+   [Adapter] Flattened into 1690 transitions for SAC.
+   SAC Buffer Relabeled (Size: 1690)
+
+======================================================================
+[PHASE 3] POLICY LEARNING - Round 2
+======================================================================
+   Training Steps: 10000
+   SAC Buffer Size: 1690
+
+   [SAC] Detect non-stationary reward scale. Resetting Critic...
+   [SAC] Resetting Critic Weights...
+   Training SAC: 100%|████████████████████████████████| 10000/10000 [04:33<00:00, 36.62step/s, act_loss=-31.158, crit_loss=0.776, reward=29.0]
+
+   Round 2 Final Performance: 33.0
+======================================================================
+
+   Checkpoint saved: checkpoints\checkpoint_round2_sac_done.pt
+
+======================================================================
+[DATA GENERATION] Round 2
+======================================================================
+
+   [1/2] SAC Collection (Exploitation)...
+   SAC Collection: 10 episodes, Avg Reward: 30.7, Max: 37.0, Min: 20.0, Std: 6.3                                                               
+
+   [2/2] Entropy Collection (Exploration)...
+   > Decay applied: 10 -> 9 episodes (Rate: 0.95)
+   Sharing SAC states with Entropy agent...
+   Entropy Collection: 9 episodes, Avg Reward: 14.1, Max: 22.0, Min: 10.0, Std: 3.9                                                            
+
+   Total Buffer Size: 139 trajectories
+======================================================================
+
+[INTERMEDIATE EVALUATION] Round 2
+   Current Performance: 30.4
+   vs Random Baseline:  9.1
+   Improvement:         3.34x
+
+   Checkpoint saved: checkpoints\checkpoint_round2_complete.pt
+
+######################################################################
+##  ROUND 3 / 5
+######################################################################
+
+     Defender Updated: 128 (SAC)
+      - Predicted Reward: 32.1
+      - True Reward:      37.0
+
+======================================================================
+[ACTIVE LEARNING] Round 3
+======================================================================
+   Queries: 20 | Pool Size: 20
+
+   Querying:  45%|████████████████████████▊                              | 9/20 [00:49<00:56,  5.14s/query, Aug=18.7x, Auto=100%, Def=128(S)✗]   [Adapter] Relabeling buffer with learned rewards...
+   [Adapter] Global reward stats:
+      Mean: 0.84
+      Std:  0.00
+      Min:  0.84
+      Max:  0.84
+   [Adapter] Flattened into 2105 transitions for SAC.
+   Checkpoint saved: checkpoints\checkpoint_round3_iter10.pt
+   Querying:  95%|███████████████████████████████████████████████████▎  | 19/20 [04:57<00:07,  7.27s/query, Aug=17.9x, Auto=100%, Def=128(S)✗]   [Adapter] Relabeling buffer with learned rewards...
+   [Adapter] Global reward stats:
+      Mean: 0.69
+      Std:  0.00
+      Min:  0.69
+      Max:  0.69
+   [Adapter] Flattened into 2105 transitions for SAC.
+   Checkpoint saved: checkpoints\checkpoint_round3_iter20.pt
+   Querying: 100%|██████████████████████████████████████████████████████| 20/20 [06:50<00:00, 20.51s/query, Aug=17.9x, Auto=100%, Def=128(S)✗]
+
+   ──────────────────────────────────────────────────────────────────
+   ROUND 3 SUMMARY
+   ──────────────────────────────────────────────────────────────────
+   Defender Changes: 0
+   Final Defender: 128 (SAC)
+   - Predicted: 31.2
+   - True:      37.0
+   True Best: 127 (r=37.0)
+   ️  Defender is suboptimal (gap: 0.0)
+     CRITICAL: Defender NEVER changed - likely stuck!
+
+   DUAL-AGENT BREAKDOWN:
+   - SAC Wins:        0
+   - Entropy Wins:    0
+   - SAC Auto-Reject: 41
+   - Entropy Auto-Reject: 352
+   - SAC Queries:     4
+   - Entropy Queries: 1
+   ──────────────────────────────────────────────────────────────────
+
+
+   ============================================================
+   RETRAINING ENSEMBLE
+   ============================================================
+   Training:  10%|██████▎                                                        | 3/30 [00:28<04:15,  9.48s/epoch, loss=0.0205, patience=2/3] 
+   Early stopping at epoch 4/30 (loss=0.0062)
+   Training:  10%|██████▎                                                        | 3/30 [00:37<05:38, 12.52s/epoch, loss=0.0205, patience=2/3] 
+    Ensemble Trained.
+   [Adapter] Relabeling buffer with learned rewards...
+   [Adapter] Global reward stats:
+      Mean: 0.89
+      Std:  0.00
+      Min:  0.89
+      Max:  0.89
+   [Adapter] Flattened into 2105 transitions for SAC.
+   SAC Buffer Relabeled (Size: 2105)
+
+======================================================================
+[PHASE 3] POLICY LEARNING - Round 3
+======================================================================
+   Training Steps: 10000
+   SAC Buffer Size: 2105
+
+   [SAC] Detect non-stationary reward scale. Resetting Critic...
+   [SAC] Resetting Critic Weights...
+   Training SAC: 100%|████████████████████████████████| 10000/10000 [03:46<00:00, 44.08step/s, act_loss=-35.166, crit_loss=0.542, reward=48.0]
+
+   Round 3 Final Performance: 50.0
+======================================================================
+
+   Checkpoint saved: checkpoints\checkpoint_round3_sac_done.pt
+
+======================================================================
+[DATA GENERATION] Round 3
+======================================================================
+
+   [1/2] SAC Collection (Exploitation)...
+   SAC Collection: 10 episodes, Avg Reward: 79.6, Max: 153.0, Min: 35.0, Std: 41.8                                                             
+
+   [2/2] Entropy Collection (Exploration)...
+   > Decay applied: 10 -> 9 episodes (Rate: 0.95)
+   Sharing SAC states with Entropy agent...
+   Entropy Collection: 9 episodes, Avg Reward: 14.7, Max: 17.0, Min: 10.0, Std: 2.7                                                            
+
+   Total Buffer Size: 158 trajectories
+======================================================================
+
+[INTERMEDIATE EVALUATION] Round 3
+   Current Performance: 49.7
+   vs Random Baseline:  9.1
+   Improvement:         5.46x
+
+   Checkpoint saved: checkpoints\checkpoint_round3_complete.pt
+
+######################################################################
+##  ROUND 4 / 5
+######################################################################
+
+     Defender Updated: 141 (SAC)
+      - Predicted Reward: 135.5
+      - True Reward:      153.0
+
+======================================================================
+[ACTIVE LEARNING] Round 4
+======================================================================
+   Queries: 20 | Pool Size: 20
+
+   Querying:  45%|████████████████████████▊                              | 9/20 [00:19<00:22,  2.06s/query, Aug=26.2x, Auto=100%, Def=141(S)✓]   [Adapter] Relabeling buffer with learned rewards...
+   [Adapter] Global reward stats:
+      Mean: 0.76
+      Std:  0.00
+      Min:  0.76
+      Max:  0.76
+   [Adapter] Flattened into 3014 transitions for SAC.
+   Checkpoint saved: checkpoints\checkpoint_round4_iter10.pt
+   Querying:  95%|███████████████████████████████████████████████████▎  | 19/20 [03:02<00:06,  6.82s/query, Aug=26.6x, Auto=100%, Def=141(S)✓]   [Adapter] Relabeling buffer with learned rewards...
+   [Adapter] Global reward stats:
+      Mean: 0.71
+      Std:  0.00
+      Min:  0.71
+      Max:  0.71
+   [Adapter] Flattened into 3014 transitions for SAC.
+   Checkpoint saved: checkpoints\checkpoint_round4_iter20.pt
+   Querying: 100%|██████████████████████████████████████████████████████| 20/20 [08:57<00:00, 26.89s/query, Aug=26.6x, Auto=100%, Def=141(S)✓]
+
+   ──────────────────────────────────────────────────────────────────
+   ROUND 4 SUMMARY
+   ──────────────────────────────────────────────────────────────────
+   Defender Changes: 0
+   Final Defender: 141 (SAC)
+   - Predicted: 116.6
+   - True:      153.0
+   True Best: 141 (r=153.0)
+    SUCCESS: Found the true best trajectory!
+     CRITICAL: Defender NEVER changed - likely stuck!
+
+   DUAL-AGENT BREAKDOWN:
+   - SAC Wins:        0
+   - Entropy Wins:    0
+   - SAC Auto-Reject: 79
+   - Entropy Auto-Reject: 320
+   - SAC Queries:     1
+   - Entropy Queries: 0
+   ──────────────────────────────────────────────────────────────────
+
+
+   ============================================================
+   RETRAINING ENSEMBLE
+   ============================================================
+   Training:  10%|██████▎                                                        | 3/30 [01:24<12:19, 27.37s/epoch, loss=0.0002, patience=2/3] 
+   Early stopping at epoch 4/30 (loss=0.0046)
+   Training:  10%|██████▎                                                        | 3/30 [02:47<25:03, 55.68s/epoch, loss=0.0002, patience=2/3] 
+    Ensemble Trained.
+   [Adapter] Relabeling buffer with learned rewards...
+   [Adapter] Global reward stats:
+      Mean: 0.65
+      Std:  0.00
+      Min:  0.65
+      Max:  0.65
+   [Adapter] Flattened into 3014 transitions for SAC.
+   SAC Buffer Relabeled (Size: 3014)
+
+======================================================================
+[PHASE 3] POLICY LEARNING - Round 4
+======================================================================
+   Training Steps: 10000
+   SAC Buffer Size: 3014
+
+   [SAC] Detect non-stationary reward scale. Resetting Critic...
+   [SAC] Resetting Critic Weights...
+   Training SAC: 100%|█████████████████████████████████| 10000/10000 [03:09<00:00, 52.73step/s, act_loss=-2.156, crit_loss=0.032, reward=83.6]
+
+   Round 4 Final Performance: 76.8
+======================================================================
+
+   Checkpoint saved: checkpoints\checkpoint_round4_sac_done.pt
+
+======================================================================
+[DATA GENERATION] Round 4
+======================================================================
+
+   [1/2] SAC Collection (Exploitation)...
+   SAC Collection: 10 episodes, Avg Reward: 89.7, Max: 255.0, Min: 38.0, Std: 60.8                                                             
+
+   [2/2] Entropy Collection (Exploration)...
+   > Decay applied: 10 -> 8 episodes (Rate: 0.95)
+   Sharing SAC states with Entropy agent...
+   Entropy Collection: 8 episodes, Avg Reward: 14.6, Max: 21.0, Min: 9.0, Std: 3.8                                                             
+
+   Total Buffer Size: 176 trajectories
+======================================================================
+
+[INTERMEDIATE EVALUATION] Round 4
+   Current Performance: 77.9
+   vs Random Baseline:  9.1
+   Improvement:         8.56x
+
+   Checkpoint saved: checkpoints\checkpoint_round4_complete.pt
+
+######################################################################
+##  ROUND 5 / 5
+######################################################################
+
+     Defender Updated: 160 (SAC)
+      - Predicted Reward: 166.7
+      - True Reward:      255.0
+
+======================================================================
+[ACTIVE LEARNING] Round 5
+======================================================================
+   Queries: 20 | Pool Size: 20
+
+   Querying:  45%|████████████████████████▊                              | 9/20 [01:20<01:54, 10.43s/query, Aug=37.4x, Auto=100%, Def=160(S)✓]   [Adapter] Relabeling buffer with learned rewards...
+   [Adapter] Global reward stats:
+      Mean: 0.72
+      Std:  0.00
+      Min:  0.72
+      Max:  0.72
+   [Adapter] Flattened into 4010 transitions for SAC.
+   Checkpoint saved: checkpoints\checkpoint_round5_iter10.pt
+   Querying:  95%|███████████████████████████████████████████████████▎  | 19/20 [04:54<00:04,  4.82s/query, Aug=37.5x, Auto=100%, Def=160(S)✓]   [Adapter] Relabeling buffer with learned rewards...
+   [Adapter] Global reward stats:
+      Mean: 0.63
+      Std:  0.00
+      Min:  0.63
+      Max:  0.63
+   [Adapter] Flattened into 4010 transitions for SAC.
+   Checkpoint saved: checkpoints\checkpoint_round5_iter20.pt
+   Querying: 100%|██████████████████████████████████████████████████████| 20/20 [07:10<00:00, 21.54s/query, Aug=37.5x, Auto=100%, Def=160(S)✓]
+
+   ──────────────────────────────────────────────────────────────────
+   ROUND 5 SUMMARY
+   ──────────────────────────────────────────────────────────────────
+   Defender Changes: 0
+   Final Defender: 160 (SAC)
+   - Predicted: 182.6
+   - True:      255.0
+   True Best: 160 (r=255.0)
+    SUCCESS: Found the true best trajectory!
+     CRITICAL: Defender NEVER changed - likely stuck!
+
+   DUAL-AGENT BREAKDOWN:
+   - SAC Wins:        0
+   - Entropy Wins:    0
+   - SAC Auto-Reject: 90
+   - Entropy Auto-Reject: 310
+   - SAC Queries:     0
+   - Entropy Queries: 0
+   ──────────────────────────────────────────────────────────────────
+
+
+   ============================================================
+   RETRAINING ENSEMBLE
+   ============================================================
+   Training:  30%|██████████████████▉                                            | 9/30 [09:30<25:03, 71.60s/epoch, loss=0.0143, patience=2/3] 
+   Early stopping at epoch 10/30 (loss=0.0005)
+   Training:  30%|██████████████████▉                                            | 9/30 [10:49<25:15, 72.15s/epoch, loss=0.0143, patience=2/3] 
+    Ensemble Trained.
+   [Adapter] Relabeling buffer with learned rewards...
+   [Adapter] Global reward stats:
+      Mean: 0.59
+      Std:  0.00
+      Min:  0.59
+      Max:  0.59
+   [Adapter] Flattened into 4010 transitions for SAC.
+   SAC Buffer Relabeled (Size: 4010)
+
+======================================================================
+[PHASE 3] POLICY LEARNING - Round 5
+======================================================================
+   Training Steps: 10000
+   SAC Buffer Size: 4010
+
+   [SAC] Detect non-stationary reward scale. Resetting Critic...
+   [SAC] Resetting Critic Weights...
+   Training SAC: 100%|███████████████████████████████| 10000/10000 [02:19<00:00, 71.55step/s, act_loss=-34.369, crit_loss=2.084, reward=112.0]
+
+   Round 5 Final Performance: 111.6
+======================================================================
+
+   Checkpoint saved: checkpoints\checkpoint_round5_sac_done.pt
+
+======================================================================
+[DATA GENERATION] Round 5
+======================================================================
+
+   [1/2] SAC Collection (Exploitation)...
+   SAC Collection: 10 episodes, Avg Reward: 132.9, Max: 274.0, Min: 98.0, Std: 49.9                                                            
+
+   [2/2] Entropy Collection (Exploration)...
+   > Decay applied: 10 -> 8 episodes (Rate: 0.95)
+   Sharing SAC states with Entropy agent...
+   Entropy Collection: 8 episodes, Avg Reward: 16.0, Max: 26.0, Min: 9.0, Std: 5.2                                                             
+
+   Total Buffer Size: 194 trajectories
+======================================================================
+
+[INTERMEDIATE EVALUATION] Round 5
+   Current Performance: 112.7
+   vs Random Baseline:  9.1
+   Improvement:         12.38x
+
+   Checkpoint saved: checkpoints\checkpoint_round5_complete.pt
+
+######################################################################
+##  FINAL EVALUATION & DIAGNOSTICS
+######################################################################
+
+
+======================================================================
+VALIDATING AUTO-LABEL CORRECTNESS
+======================================================================
+   Total preferences in graph: 600
+   Correct predictions: 598
+   Accuracy: 99.7%
+    EXCELLENT: Auto-labels are highly accurate!
+======================================================================
+
+
+============================================================
+PREFERENCE GRAPH SUMMARY
+============================================================
+  Nodes (trajectories):     175
+  Direct queries (human):   16
+  Auto-labels (UCB/LCB):    216
+  Transitive inferences:    368
+  Total edges:              600
+  Augmentation ratio:       37.50x
+============================================================
+
+Top 5 trajectories:
+  1. Trajectory 160: 174 wins
+  2. Trajectory 141: 157 wins
+  3. Trajectory 128: 138 wins
+  4. Trajectory 97: 119 wins
+  5. Trajectory 89: 2 wins
+
+
+======================================================================
+FINAL EVALUATION (20 episodes)
+======================================================================
+
+   Evaluating Random Policy...
+   Evaluating Trained Agent...                                                                                                                 
+                                                                                                                                               
+   ──────────────────────────────────────────────────────────────────
+   PERFORMANCE COMPARISON
+   ──────────────────────────────────────────────────────────────────
+   Random Policy:  21.5 ± 14.6
+   Trained Agent:  110.5 ± 4.7
+   Improvement:    5.14x
+   ──────────────────────────────────────────────────────────────────
+
+    SUCCESS: Agent significantly outperforms random!
+======================================================================
+
+
+   Generating diagnostic plots...
+    Diagnostics saved: diagnostics/diagnostics.png
+   Generating dual-agent diagnostic plots...
+   ✓ Dual-agent stats saved: diagnostics/dual_agent_stats.png
+
+[EXPORTING LOGS]
+    Query log: logs\query_log.csv
+    Dual-agent stats: logs\dual_agent_stats.csv
+
+   round  defender_id defender_source  defender_true_reward  defender_changes  SAC_Wins  Entropy_Wins  SAC_Auto  Entropy_Auto  SAC_Query  Entropy_Query
+0      1           97         Entropy                  36.0                 0         0             0         0           400          0              0
+1      2           97         Entropy                  36.0                 0         0             0        36           364          0              0
+2      3          128             SAC                  37.0                 0         0             0        41           352          4              1
+3      4          141             SAC                 153.0                 0         0             0        79           320          1              0
+4      5          160             SAC                 255.0                 0         0             0        90           310          0              0
+
+    Reward correlations: logs\reward_correlations.csv
+    SAC performance: logs\sac_performance.csv
+
+======================================================================
+[VIDEO RECORDING]
+======================================================================
+   Recording 3 episodes...
+   Output: videos/
+
+D:\rlhf-hybrid-capstone\.venv\lib\site-packages\gymnasium\wrappers\rendering.py:293: UserWarning: WARN: Overwriting existing videos at D:\rlhf-hybrid-capstone\videos folder (try specifying a different `video_folder` for the `RecordVideo` wrapper if this is not desired)
+  logger.warn(
+D:\rlhf-hybrid-capstone\.venv\lib\site-packages\pygame\pkgdata.py:25: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import resource_stream, resource_exists
+D:\rlhf-hybrid-capstone\experiments\train.py:1022: DeprecationWarning: Conversion of an array with ndim > 0 to a scalar is deprecated, and will error in future. Ensure you extract a single element from your array before performing this operation. (Deprecated NumPy 1.25.)
+  action = int(action > 0.5)
+   Episode 1/3: 362 steps, reward=362.0
+   Episode 2/3: 318 steps, reward=318.0
+   Episode 3/3: 319 steps, reward=319.0
+
+   ✓ Videos saved to: videos/
+======================================================================
+
+
+######################################################################
+##  EXPERIMENT COMPLETE
+######################################################################
+   Total Human Queries: 16
+   Final Performance:   110.5
+   Random Baseline:     21.5
+   Improvement:         5.14x
+   Graph Edges:         600
+   Trajectories:        194
+######################################################################
+
+
+(rlhf-hybrid-capstone) D:\rlhf-hybrid-capstone>
+(rlhf-hybrid-capstone) D:\rlhf-hybrid-capstone>git add .
+warning: in the working copy of 'requirements.txt', LF will be replaced by CRLF the next time Git touches it
+
+(rlhf-hybrid-capstone) D:\rlhf-hybrid-capstone>git commit -m "better performance finally"
+[master 87b78e9] better performance finally
+ 54 files changed, 1464 insertions(+), 469 deletions(-)
+ create mode 100644 checkpoints/checkpoint_round1_complete.pt
+ create mode 100644 checkpoints/checkpoint_round1_iter10.pt
+ create mode 100644 checkpoints/checkpoint_round1_iter20.pt
+ create mode 100644 checkpoints/checkpoint_round1_sac_done.pt
+ create mode 100644 checkpoints/checkpoint_round2_complete.pt
+ create mode 100644 checkpoints/checkpoint_round2_iter10.pt
+ create mode 100644 checkpoints/checkpoint_round2_iter20.pt
+ create mode 100644 checkpoints/checkpoint_round2_sac_done.pt
+ create mode 100644 checkpoints/checkpoint_round3_complete.pt
+ create mode 100644 checkpoints/checkpoint_round3_iter10.pt
+ create mode 100644 checkpoints/checkpoint_round3_iter20.pt
+ create mode 100644 checkpoints/checkpoint_round3_sac_done.pt
+ create mode 100644 checkpoints/checkpoint_round4_complete.pt
+ create mode 100644 checkpoints/checkpoint_round4_iter10.pt
+ create mode 100644 checkpoints/checkpoint_round4_iter20.pt
+ create mode 100644 checkpoints/checkpoint_round4_sac_done.pt
+ create mode 100644 checkpoints/checkpoint_round5_complete.pt
+ create mode 100644 checkpoints/checkpoint_round5_iter10.pt
+ create mode 100644 checkpoints/checkpoint_round5_iter20.pt
+ create mode 100644 checkpoints/checkpoint_round5_sac_done.pt
+ create mode 100644 diagnose.py
+ create mode 100644 diagnostics/diagnostics.png
+ create mode 100644 diagnostics/dual_agent_stats.png
+ create mode 100644 logs/dual_agent_stats.csv
+ create mode 100644 logs/loop_diagnostics.csv
+ create mode 100644 logs/query_log.csv
+ create mode 100644 logs/reward_correlations.csv
+ create mode 100644 logs/sac_performance.csv
+ create mode 100644 requirements.txt
+ create mode 100644 rlhf_project.tar.gz
+ create mode 100644 videos/final_agent-episode-0.mp4
+ create mode 100644 videos/final_agent-episode-1.mp4
+ create mode 100644 videos/final_agent-episode-2.mp4
+
+(rlhf-hybrid-capstone) D:\rlhf-hybrid-capstone>git push
+Enumerating objects: 104, done.
+Counting objects: 100% (104/104), done.
+Delta compression using up to 16 threads
+Compressing objects: 100% (75/75), done.
+Writing objects: 100% (76/76), 26.98 MiB | 15.10 MiB/s, done.
+Total 76 (delta 20), reused 0 (delta 0), pack-reused 0
+remote: Resolving deltas: 100% (20/20), completed with 12 local objects.
+To https://github.com/karthick-yes/rlhf-hybrid-capstone.git
+   9a312f3..87b78e9  master -> master
+
+(rlhf-hybrid-capstone) D:\rlhf-hybrid-capstone>

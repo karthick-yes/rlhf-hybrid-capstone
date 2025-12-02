@@ -1,25 +1,50 @@
-metaworld_door_open:
-  env_name: 'metaworld-door-open'
-  
-  # MetaWorld has HIGHER reward variance than CartPole
-  # Trajectories are more diverse → easier to rank
-  
-  # Longer segments (MetaWorld episodes are 200 steps)
-  segment_length: 100
-  n_trajectories: 30
-  
-  # Active learning
-  n_bootstrap: 5
-  n_queries: 50               # More queries (larger state space)
-  pool_size: 30
-  beta: 3.0                   # Standard confidence
-  update_freq: 10
-  
-  # Larger ensemble (more complex task)
-  ensemble_size: 5
-  hidden_dim: 512             # Bigger network for complex states
-  lr: 1e-4                    # Slower learning (avoid overfitting)
-  
-  # More SAC training
-  sac_steps: 10000
-  buffer_capacity: 50000
+# ==================== ENVIRONMENT ====================
+env_name: 'metaworld-door-open'  # Wrapper will convert to 'metaworld-door-open-v2-goal-observable'
+state_dim: 39                    # Standard MetaWorld observable dim
+action_dim: 4                    # x, y, z, gripper
+
+# Episode lengths
+segment_length: 50               # Keep 50. 100 is too long for precise feedback.
+max_episode_steps: 500           # MetaWorld standard
+
+# ==================== DUAL-AGENT LOOP ARCHITECTURE ====================
+n_rounds: 10                     # Increased: 5 rounds is too short for manipulation
+n_queries_per_round: 50          # Increased: Need more labels for complex state space
+sac_steps_per_round: 50000       # CRITICAL: 10k is too low. 50k * 10 rounds = 500k steps total.
+sac_collection_episodes: 20      # Collect more good data
+entropy_collection_episodes: 20  # Exploration is harder in 3D space
+entropy_decay: 0.95              # Slow decay. You need exploration for a long time.
+
+# ==================== INITIAL WARMUP ====================
+n_trajectories: 200              # Need more initial data to cover the 3D space
+n_bootstrap: 50                  # Need better initial reward model
+
+# ==================== ACTIVE LEARNING ====================
+beta: 3.0                        # Standard confidence
+adaptive_beta: true              
+pool_size: 100                   # Larger pool to find rare good segments
+update_freq: 25                  # Retrain less often to save time
+exploration_epsilon: 0.2         # Higher epsilon to force diversity in queries
+
+# ==================== REWARD ENSEMBLE ====================
+ensemble_size: 7                 # Stability
+hidden_dim: 256                  # Increased from 64 for 3D spatial reasoning
+lr: 0.0003
+weight_decay: 0.001              # Prevent overfitting on sparse success signals
+
+# ==================== SAC HYPERPARAMETERS ====================
+gamma: 0.99
+tau: 0.005
+alpha: 0.2                       # MetaWorld needs higher initial entropy
+hidden_dim: 1024                 # CRITICAL: SAC needs big networks for manipulation
+
+# ==================== BUFFERS ====================
+buffer_capacity: 1000000         # 1M buffer
+
+# ==================== SAFETY & STABILITY ====================
+min_warmup_reward: -10000.0      # Disable quality check (MetaWorld rewards are weird/sparse)
+std_threshold: 10.0              # Tighter threshold for uncertainty
+entropy_full_buffer: false       # Set FALSE for speed (MetaWorld obs are large)
+
+# ==================== REPRODUCIBILITY ====================
+seed: 42
