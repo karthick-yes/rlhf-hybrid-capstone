@@ -26,6 +26,24 @@ from src.utils.logger import ExperimentLogger
 from src.envs.oracle import Oracle
 
 
+class TeeOutput:
+    """Captures terminal output to a file while still displaying it."""
+    def __init__(self, filename, mode='w'):
+        self.file = open(filename, mode, encoding='utf-8', buffering=1)  # Line buffering
+        self.terminal = sys.stdout
+        
+    def write(self, message):
+        self.terminal.write(message)
+        self.file.write(message)
+        
+    def flush(self):
+        self.terminal.flush()
+        self.file.flush()
+        
+    def close(self):
+        self.file.close()
+
+
 def load_config(config_path):
     """Load configuration from YAML file or return defaults"""
     if config_path and os.path.exists(config_path):
@@ -1443,5 +1461,22 @@ if __name__ == "__main__":
     if args.rounds is not None: config['n_rounds'] = args.rounds
     if args.bootstrap is not None: config['n_bootstrap'] = args.bootstrap
     
-    trainer = HybridDualAgentTrainer(config)
-    trainer.run()
+    # Create logs directory if it doesn't exist
+    os.makedirs('logs', exist_ok=True)
+    
+    # Redirect stdout and stderr to file while keeping terminal output
+    log_file = TeeOutput('logs/training_output.txt', mode='w')
+    original_stdout = sys.stdout
+    original_stderr = sys.stderr
+    sys.stdout = log_file
+    sys.stderr = log_file
+    
+    try:
+        trainer = HybridDualAgentTrainer(config)
+        trainer.run()
+    finally:
+        # Restore original stdout/stderr
+        sys.stdout = original_stdout
+        sys.stderr = original_stderr
+        log_file.close()
+        print(f"Training output saved to: logs/training_output.txt")

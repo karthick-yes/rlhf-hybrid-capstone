@@ -1,0 +1,10 @@
+env_name: 'CartPole-v1'
+n_rounds: 1
+n_queries_per_round: 5
+n_trajectories: 10
+n_bootstrap: 5
+min_warmup_reward: -100.0 # Low threshold to pass quickly
+use_active_dethroning: false
+sac_collection_episodes: 2
+entropy_collection_episodes: 2
+sac_steps_per_round: 100

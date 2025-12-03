@@ -1,0 +1,594 @@
+
+======================================================================
+DUAL-AGENT HYBRID PREFERENCE LEARNING SYSTEM
+======================================================================
+   Device: cuda
+   Environment: CartPole-v1
+   Architecture: Iterative Dual-Agent Loop
+   Beta (UCB/LCB): 7.0
+   Ensemble Size: 3
+   Training Rounds: 1
+======================================================================
+
+
+[CONFIG VERIFICATION]
+   Learning Rate (lr): None
+   Beta: None
+   Std Threshold: None
+   Hidden Dim: None
+   Entropy Full Buffer: None
+------------------------------
+
+[ENV CONFIG]
+   Query Length (segment_length): 50
+   Collection Length (max_episode_steps): 500
+   State Dim: 4
+   Action Dim: 1
+   Is Discrete: False
+
+[RewardEnsemble] Using device: cuda
+[RewardEnsemble] Initialized 5 models on cuda
+[INITIALIZATION COMPLETE]
+
+
+======================================================================
+[PHASE 1] UNSUPERVISED WARMUP - Attempt 1
+======================================================================
+   Target Episodes: 10
+   Using: Entropy Agent (Max-Entropy Exploration)
+
+   Entropy Collection: 10 episodes, Avg Reward: 20.9, Max: 42.0, Min: 8.0, Std: 12.7
+
+   ──────────────────────────────────────────────────────────────────
+   QUALITY CHECK
+   ──────────────────────────────────────────────────────────────────
+   Mean Reward: 20.90
+   Max Reward:  42.00
+   Std Reward:  12.70
+   ──────────────────────────────────────────────────────────────────
+   ✓ Quality threshold met (42.00 >= -100.0)
+
+   Phase 1 Complete: 10 trajectories collected
+   All trajectories tagged as: Entropy
+======================================================================
+
+   Checkpoint saved: checkpoints\checkpoint_phase1_done.pt
+
+======================================================================
+[BOOTSTRAP] ENSEMBLE INITIALIZATION
+======================================================================
+   Random Queries: 5
+
+   Bootstrap  1: 1(Entropy) > 0(Entropy) | Rewards: 37.0 > 15.0
+   Bootstrap  2: 9(Entropy) > 2(Entropy) | Rewards: 11.0 > 11.0
+   Bootstrap  3: 6(Entropy) > 2(Entropy) | Rewards: 40.0 > 11.0
+   Bootstrap  4: 2(Entropy) > 4(Entropy) | Rewards: 11.0 > 8.0
+   Bootstrap  5: 1(Entropy) > 0(Entropy) | Rewards: 37.0 > 15.0
+
+   ──────────────────────────────────────────────────────────────────
+   REWARD DISTRIBUTION
+   ──────────────────────────────────────────────────────────────────
+   Min:  8.0
+   Max:  42.0
+   Mean: 20.9
+   Std:  12.7
+   ──────────────────────────────────────────────────────────────────
+
+     WARNING: Max reward only 42.0 < 100
+   Agent may underperform due to lack of good examples
+   Consider extending warmup phase
+
+
+   Training ensemble on 5 bootstrap labels...
+   [Adapter] Relabeling buffer with learned rewards...
+   [Adapter] Global reward stats:
+      Mean: 3.14
+      Std:  0.99
+      Min:  1.70
+      Max:  6.96
+   [Adapter] Flattened into 199 transitions for SAC.
+     Defender Updated: 1 (Entropy)
+      - Predicted Reward: 146.7
+      - True Reward:      37.0
+
+   Bootstrap Complete:
+   - Total Edges: 6
+   - Augmentation: 1.50x
+   - Human Queries: 5
+======================================================================
+
+   Initial Reward Correlation: 0.902
+
+   Checkpoint saved: checkpoints\checkpoint_bootstrap_done.pt
+
+======================================================================
+[ACTIVE LEARNING] Round 1
+======================================================================
+   Queries: 5 | Pool Size: 20
+
+     [ABLATION] Randomly selected challenger 6 from uncertain pool
+
+    HUMAN QUERY DETHRONE
+      6(Entropy, r=40.0) > Defender 1(Entropy, r=37.0)
+     [ABLATION] Randomly selected challenger 3 from uncertain pool
+
+    HUMAN QUERY DETHRONE
+      3(Entropy, r=42.0) > Defender 6(Entropy, r=40.0)
+     [ABLATION] Randomly selected challenger 1 from uncertain pool
+
+   ──────────────────────────────────────────────────────────────────
+   ROUND 1 SUMMARY
+   ──────────────────────────────────────────────────────────────────
+   Defender Changes: 2
+   Final Defender: 3 (Entropy)
+   - Predicted: 138.4
+   - True:      42.0
+   True Best: 3 (r=42.0)
+    SUCCESS: Found the true best trajectory!
+   ️  Only 2 changes - may be under-exploring
+
+   DUAL-AGENT BREAKDOWN:
+   - SAC Wins:        0
+   - Entropy Wins:    2
+   - SAC Auto-Reject: 0
+   - Entropy Auto-Reject: 33
+   - SAC Queries:     0
+   - Entropy Queries: 3
+   ──────────────────────────────────────────────────────────────────
+
+
+======================================================================
+[POLICY LEARNING] Round 1
+======================================================================
+   Steps: 100
+     Warning: Buffer too small for effective training
+
+======================================================================
+DUAL-AGENT HYBRID PREFERENCE LEARNING SYSTEM
+======================================================================
+   Device: cuda
+   Environment: CartPole-v1
+   Architecture: Iterative Dual-Agent Loop
+   Beta (UCB/LCB): 7.0
+   Ensemble Size: 3
+   Training Rounds: 1
+======================================================================
+
+
+[CONFIG VERIFICATION]
+   Learning Rate (lr): None
+   Beta: None
+   Std Threshold: None
+   Hidden Dim: None
+   Entropy Full Buffer: None
+------------------------------
+
+[ENV CONFIG]
+   Query Length (segment_length): 50
+   Collection Length (max_episode_steps): 500
+   State Dim: 4
+   Action Dim: 1
+   Is Discrete: False
+
+[RewardEnsemble] Using device: cuda
+[RewardEnsemble] Initialized 5 models on cuda
+[INITIALIZATION COMPLETE]
+
+
+======================================================================
+[PHASE 1] UNSUPERVISED WARMUP - Attempt 1
+======================================================================
+   Target Episodes: 10
+   Using: Entropy Agent (Max-Entropy Exploration)
+
+   Entropy Collection: 10 episodes, Avg Reward: 12.0, Max: 19.0, Min: 8.0, Std: 3.0
+
+   ──────────────────────────────────────────────────────────────────
+   QUALITY CHECK
+   ──────────────────────────────────────────────────────────────────
+   Mean Reward: 12.00
+   Max Reward:  19.00
+   Std Reward:  2.97
+   ──────────────────────────────────────────────────────────────────
+   ✓ Quality threshold met (19.00 >= -100.0)
+
+   Phase 1 Complete: 10 trajectories collected
+   All trajectories tagged as: Entropy
+======================================================================
+
+   Checkpoint saved: checkpoints\checkpoint_phase1_done.pt
+
+======================================================================
+[BOOTSTRAP] ENSEMBLE INITIALIZATION
+======================================================================
+   Random Queries: 5
+
+   Bootstrap  1: 1(Entropy) > 3(Entropy) | Rewards: 19.0 > 12.0
+   Bootstrap  2: 1(Entropy) > 2(Entropy) | Rewards: 19.0 > 10.0
+   Bootstrap  3: 1(Entropy) > 7(Entropy) | Rewards: 19.0 > 12.0
+   Bootstrap  4: 1(Entropy) > 4(Entropy) | Rewards: 19.0 > 8.0
+   Bootstrap  5: 1(Entropy) > 6(Entropy) | Rewards: 19.0 > 9.0
+
+   ──────────────────────────────────────────────────────────────────
+   REWARD DISTRIBUTION
+   ──────────────────────────────────────────────────────────────────
+   Min:  8.0
+   Max:  19.0
+   Mean: 12.0
+   Std:  3.0
+   ──────────────────────────────────────────────────────────────────
+
+     WARNING: Max reward only 19.0 < 100
+   Agent may underperform due to lack of good examples
+   Consider extending warmup phase
+
+
+   Training ensemble on 5 bootstrap labels...
+   [Adapter] Relabeling buffer with learned rewards...
+   [Adapter] Global reward stats:
+      Mean: 1.31
+      Std:  0.16
+      Min:  1.07
+      Max:  1.88
+   [Adapter] Flattened into 110 transitions for SAC.
+     Defender Updated: 1 (Entropy)
+      - Predicted Reward: 24.9
+      - True Reward:      19.0
+
+   Bootstrap Complete:
+   - Total Edges: 5
+   - Augmentation: 1.00x
+   - Human Queries: 5
+======================================================================
+
+   Initial Reward Correlation: 0.991
+
+   Checkpoint saved: checkpoints\checkpoint_bootstrap_done.pt
+
+======================================================================
+[ACTIVE LEARNING] Round 1
+======================================================================
+   Queries: 5 | Pool Size: 20
+
+     [ABLATION] Randomly selected challenger 0 from uncertain pool
+     [ABLATION] Randomly selected challenger 8 from uncertain pool
+     [ABLATION] Randomly selected challenger 9 from uncertain pool
+     [ABLATION] Randomly selected challenger 5 from uncertain pool
+
+     No new candidates available!
+
+   ──────────────────────────────────────────────────────────────────
+   ROUND 1 SUMMARY
+   ──────────────────────────────────────────────────────────────────
+   Defender Changes: 0
+   Final Defender: 1 (Entropy)
+   - Predicted: 24.9
+   - True:      19.0
+   True Best: 1 (r=19.0)
+    SUCCESS: Found the true best trajectory!
+     CRITICAL: Defender NEVER changed - likely stuck!
+
+   DUAL-AGENT BREAKDOWN:
+   - SAC Wins:        0
+   - Entropy Wins:    0
+   - SAC Auto-Reject: 0
+   - Entropy Auto-Reject: 0
+   - SAC Queries:     0
+   - Entropy Queries: 4
+   ──────────────────────────────────────────────────────────────────
+
+
+======================================================================
+[POLICY LEARNING] Round 1
+======================================================================
+   Steps: 100
+     Warning: Buffer too small for effective training
+
+======================================================================
+DUAL-AGENT HYBRID PREFERENCE LEARNING SYSTEM
+======================================================================
+   Device: cuda
+   Environment: CartPole-v1
+   Architecture: Iterative Dual-Agent Loop
+   Beta (UCB/LCB): 7.0
+   Ensemble Size: 3
+   Training Rounds: 1
+======================================================================
+
+
+[CONFIG VERIFICATION]
+   Learning Rate (lr): None
+   Beta: None
+   Std Threshold: None
+   Hidden Dim: None
+   Entropy Full Buffer: None
+------------------------------
+
+[ENV CONFIG]
+   Query Length (segment_length): 50
+   Collection Length (max_episode_steps): 500
+   State Dim: 4
+   Action Dim: 1
+   Is Discrete: False
+
+[RewardEnsemble] Using device: cuda
+[RewardEnsemble] Initialized 5 models on cuda
+[INITIALIZATION COMPLETE]
+
+
+======================================================================
+[PHASE 1] UNSUPERVISED WARMUP - Attempt 1
+======================================================================
+   Target Episodes: 10
+   Using: Entropy Agent (Max-Entropy Exploration)
+
+   Entropy Collection: 10 episodes, Avg Reward: 14.4, Max: 21.0, Min: 11.0, Std: 3.3
+
+   ──────────────────────────────────────────────────────────────────
+   QUALITY CHECK
+   ──────────────────────────────────────────────────────────────────
+   Mean Reward: 14.40
+   Max Reward:  21.00
+   Std Reward:  3.32
+   ──────────────────────────────────────────────────────────────────
+   ✓ Quality threshold met (21.00 >= -100.0)
+
+   Phase 1 Complete: 10 trajectories collected
+   All trajectories tagged as: Entropy
+======================================================================
+
+   Checkpoint saved: checkpoints\checkpoint_phase1_done.pt
+
+======================================================================
+[BOOTSTRAP] ENSEMBLE INITIALIZATION
+======================================================================
+   Random Queries: 5
+
+   Bootstrap  1: 7(Entropy) > 1(Entropy) | Rewards: 16.0 > 11.0
+   Bootstrap  2: 5(Entropy) > 0(Entropy) | Rewards: 19.0 > 12.0
+   Bootstrap  3: 6(Entropy) > 3(Entropy) | Rewards: 12.0 > 11.0
+   Bootstrap  4: 2(Entropy) > 7(Entropy) | Rewards: 16.0 > 16.0
+   Bootstrap  5: 2(Entropy) > 4(Entropy) | Rewards: 16.0 > 12.0
+
+   ──────────────────────────────────────────────────────────────────
+   REWARD DISTRIBUTION
+   ──────────────────────────────────────────────────────────────────
+   Min:  11.0
+   Max:  21.0
+   Mean: 14.4
+   Std:  3.3
+   ──────────────────────────────────────────────────────────────────
+
+     WARNING: Max reward only 21.0 < 100
+   Agent may underperform due to lack of good examples
+   Consider extending warmup phase
+
+
+   Training ensemble on 5 bootstrap labels...
+   [Adapter] Relabeling buffer with learned rewards...
+   [Adapter] Global reward stats:
+      Mean: 4.52
+      Std:  0.66
+      Min:  3.45
+      Max:  5.99
+   [Adapter] Flattened into 134 transitions for SAC.
+     Defender Updated: 8 (Entropy)
+      - Predicted Reward: 91.9
+      - True Reward:      21.0
+
+   Bootstrap Complete:
+   - Total Edges: 6
+   - Augmentation: 1.20x
+   - Human Queries: 5
+======================================================================
+
+   Initial Reward Correlation: 0.982
+
+   Checkpoint saved: checkpoints\checkpoint_bootstrap_done.pt
+
+======================================================================
+[ACTIVE LEARNING] Round 1
+======================================================================
+   Queries: 5 | Pool Size: 20
+
+     [ABLATION] Randomly selected challenger 5 from uncertain pool
+     [ABLATION] Randomly selected challenger 7 from uncertain pool
+     [ABLATION] Randomly selected challenger 4 from uncertain pool
+     [ABLATION] Randomly selected challenger 2 from uncertain pool
+     [ABLATION] Randomly selected challenger 6 from uncertain pool
+
+   ──────────────────────────────────────────────────────────────────
+   ROUND 1 SUMMARY
+   ──────────────────────────────────────────────────────────────────
+   Defender Changes: 0
+   Final Defender: 8 (Entropy)
+   - Predicted: 91.9
+   - True:      21.0
+   True Best: 8 (r=21.0)
+    SUCCESS: Found the true best trajectory!
+     CRITICAL: Defender NEVER changed - likely stuck!
+
+   DUAL-AGENT BREAKDOWN:
+   - SAC Wins:        0
+   - Entropy Wins:    0
+   - SAC Auto-Reject: 0
+   - Entropy Auto-Reject: 0
+   - SAC Queries:     0
+   - Entropy Queries: 5
+   ──────────────────────────────────────────────────────────────────
+
+
+======================================================================
+[POLICY LEARNING] Round 1
+======================================================================
+   Steps: 100
+     Warning: Buffer too small for effective training
+   SAC Training Complete (Avg Critic Loss: 0.9596)
+======================================================================
+
+
+[DATA GENERATION] Round 1
+   SAC Collection: 2 episodes, Avg Reward: 8.5, Max: 9.0, Min: 8.0, Std: 0.5
+   Entropy Collection: 2 episodes, Avg Reward: 18.0, Max: 21.0, Min: 15.0, Std: 3.0
+   Checkpoint saved: checkpoints\checkpoint_round_1_done.pt
+
+======================================================================
+TRAINING COMPLETE
+======================================================================
+   Generating diagnostic plots...
+    Diagnostics saved: diagnostics/diagnostics.png
+   Generating dual-agent diagnostic plots...
+
+======================================================================
+DUAL-AGENT HYBRID PREFERENCE LEARNING SYSTEM
+======================================================================
+   Device: cuda
+   Environment: CartPole-v1
+   Architecture: Iterative Dual-Agent Loop
+   Beta (UCB/LCB): 7.0
+   Ensemble Size: 3
+   Training Rounds: 1
+======================================================================
+
+
+[CONFIG VERIFICATION]
+   Learning Rate (lr): None
+   Beta: None
+   Std Threshold: None
+   Hidden Dim: None
+   Entropy Full Buffer: None
+------------------------------
+
+[ENV CONFIG]
+   Query Length (segment_length): 50
+   Collection Length (max_episode_steps): 500
+   State Dim: 4
+   Action Dim: 1
+   Is Discrete: False
+
+[RewardEnsemble] Using device: cuda
+[RewardEnsemble] Initialized 5 models on cuda
+[INITIALIZATION COMPLETE]
+
+
+======================================================================
+[PHASE 1] UNSUPERVISED WARMUP - Attempt 1
+======================================================================
+   Target Episodes: 10
+   Using: Entropy Agent (Max-Entropy Exploration)
+
+   Entropy Collection: 10 episodes, Avg Reward: 15.4, Max: 26.0, Min: 11.0, Std: 4.6
+
+   ──────────────────────────────────────────────────────────────────
+   QUALITY CHECK
+   ──────────────────────────────────────────────────────────────────
+   Mean Reward: 15.40
+   Max Reward:  26.00
+   Std Reward:  4.59
+   ──────────────────────────────────────────────────────────────────
+   ✓ Quality threshold met (26.00 >= -100.0)
+
+   Phase 1 Complete: 10 trajectories collected
+   All trajectories tagged as: Entropy
+======================================================================
+
+   Checkpoint saved: checkpoints\checkpoint_phase1_done.pt
+
+======================================================================
+[BOOTSTRAP] ENSEMBLE INITIALIZATION
+======================================================================
+   Random Queries: 5
+
+   Bootstrap  1: 6(Entropy) > 0(Entropy) | Rewards: 13.0 > 13.0
+   Bootstrap  2: 5(Entropy) > 8(Entropy) | Rewards: 13.0 > 12.0
+   Bootstrap  3: 3(Entropy) > 4(Entropy) | Rewards: 22.0 > 11.0
+   Bootstrap  4: 5(Entropy) > 6(Entropy) | Rewards: 13.0 > 13.0
+   Bootstrap  5: 0(Entropy) > 4(Entropy) | Rewards: 13.0 > 11.0
+
+   ──────────────────────────────────────────────────────────────────
+   REWARD DISTRIBUTION
+   ──────────────────────────────────────────────────────────────────
+   Min:  11.0
+   Max:  26.0
+   Mean: 15.4
+   Std:  4.6
+   ──────────────────────────────────────────────────────────────────
+
+     WARNING: Max reward only 26.0 < 100
+   Agent may underperform due to lack of good examples
+   Consider extending warmup phase
+
+
+   Training ensemble on 5 bootstrap labels...
+   [Adapter] Relabeling buffer with learned rewards...
+   [Adapter] Global reward stats:
+      Mean: 4.76
+      Std:  2.60
+      Min:  0.68
+      Max:  14.58
+   [Adapter] Flattened into 144 transitions for SAC.
+     Defender Updated: 9 (Entropy)
+      - Predicted Reward: 132.0
+      - True Reward:      26.0
+
+   Bootstrap Complete:
+   - Total Edges: 8
+   - Augmentation: 1.60x
+   - Human Queries: 5
+======================================================================
+
+   Initial Reward Correlation: 0.882
+
+   Checkpoint saved: checkpoints\checkpoint_bootstrap_done.pt
+
+======================================================================
+[ACTIVE LEARNING] Round 1
+======================================================================
+   Queries: 5 | Pool Size: 20
+
+     [ABLATION] Randomly selected challenger 5 from uncertain pool
+     [ABLATION] Randomly selected challenger 0 from uncertain pool
+     [ABLATION] Randomly selected challenger 6 from uncertain pool
+     [ABLATION] Randomly selected challenger 3 from uncertain pool
+     [ABLATION] Randomly selected challenger 7 from uncertain pool
+
+   ──────────────────────────────────────────────────────────────────
+   ROUND 1 SUMMARY
+   ──────────────────────────────────────────────────────────────────
+   Defender Changes: 0
+   Final Defender: 9 (Entropy)
+   - Predicted: 132.0
+   - True:      26.0
+   True Best: 9 (r=26.0)
+    SUCCESS: Found the true best trajectory!
+     CRITICAL: Defender NEVER changed - likely stuck!
+
+   DUAL-AGENT BREAKDOWN:
+   - SAC Wins:        0
+   - Entropy Wins:    0
+   - SAC Auto-Reject: 0
+   - Entropy Auto-Reject: 5
+   - SAC Queries:     0
+   - Entropy Queries: 5
+   ──────────────────────────────────────────────────────────────────
+
+
+======================================================================
+[POLICY LEARNING] Round 1
+======================================================================
+   Steps: 100
+     Warning: Buffer too small for effective training
+   SAC Training Complete (Avg Critic Loss: 0.2676)
+======================================================================
+
+
+[DATA GENERATION] Round 1
+   SAC Collection: 2 episodes, Avg Reward: 8.5, Max: 9.0, Min: 8.0, Std: 0.5
+   Entropy Collection: 2 episodes, Avg Reward: 11.5, Max: 12.0, Min: 11.0, Std: 0.5
+   Checkpoint saved: checkpoints\checkpoint_round_1_done.pt
+
+======================================================================
+TRAINING COMPLETE
+======================================================================
+   Generating diagnostic plots...
+   Generating dual-agent diagnostic plots...
