@@ -82,8 +82,8 @@ class SACBufferAdapter:
             raw_rewards = data['raw_rewards']
         
         # Normalize using GLOBAL statistics
-            learned_rewards = (raw_rewards - reward_mean) / reward_std    
-            
+            #learned_rewards = (raw_rewards - reward_mean) / reward_std    
+            learned_rewards = raw_rewards
             # --- FLATTEN LOOP ---
             T = len(states)
             for t in range(T - 1):

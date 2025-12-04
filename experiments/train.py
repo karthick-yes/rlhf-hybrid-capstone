@@ -880,9 +880,9 @@ class HybridDualAgentTrainer:
             print("   ️  Error: SAC Buffer too small (<100 samples)")
             return
         
-        if round_num > 1: 
-             print("   [SAC] Detect non-stationary reward scale. Resetting Critic...")
-             self.sac_agent.reset_critic()
+        #if round_num > 1: 
+        #    print("   [SAC] Detect non-stationary reward scale. Resetting Critic...")
+        #     self.sac_agent.reset_critic()
              
         # Evaluate performance periodically during training (Doc 1)
         eval_frequency = max(1000, n_steps // 10)
