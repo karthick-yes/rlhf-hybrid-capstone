@@ -449,14 +449,18 @@ class HybridDualAgentTrainer:
         
         self.save_checkpoint("bootstrap_done")
 
-    def update_defender(self, force_model_based=False):
+    def update_defender(self, force_model_based=None):
         """
         Select the best trajectory to be the 'Defender' (Root) for the next round.
         
         Args:
             force_model_based (bool): If True, skip PageRank and strictly use 
                                       Reward Model predictions (Argmax).
+                                      If None, reads from config.
         """
+        # Read from config if not explicitly passed
+        if force_model_based is None:
+            force_model_based = self.config.get('force_model_based', False)
         all_ids = self.pref_buffer.get_all_ids()
         if not all_ids:
             print("     Warning: No trajectories available for defender update")
@@ -1181,7 +1185,7 @@ class HybridDualAgentTrainer:
         return avg_rnd, avg_agt
 
     def plot_diagnostics(self, save_path='diagnostics/diagnostics.png'):
-        """Enhanced diagnostics with 6 plots (Doc 1)"""
+        """Enhanced diagnostics with 6 plots (Doc 1) - FIXED SORTING"""
         if len(self.query_log) == 0:
             print("     No query log data to plot.")
             return
@@ -1191,13 +1195,19 @@ class HybridDualAgentTrainer:
         fig = plt.figure(figsize=(18, 12))
         gs = fig.add_gridspec(3, 2, hspace=0.3, wspace=0.3)
         
-        # Extract data
-        iterations = [log['iteration'] for log in self.query_log]
-        rounds = [log['round'] for log in self.query_log]
+        # CRITICAL FIX: Sort query_log by round and iteration before extracting
+        sorted_logs = sorted(self.query_log, key=lambda x: (x['round'], x['iteration']))
+        
+        # Extract data from sorted logs
+        iterations = [log['iteration'] for log in sorted_logs]
+        rounds = [log['round'] for log in sorted_logs]
+        ratios = [log['augmentation'] for log in sorted_logs]
+        auto_rates = [log['auto_rate'] for log in sorted_logs]
+        edges = [log['graph_edges'] for log in sorted_logs]
+        stds = [log['ensemble_std_mean'] for log in sorted_logs]
         
         # Plot 1: Augmentation Ratio
         ax1 = fig.add_subplot(gs[0, 0])
-        ratios = [log['augmentation'] for log in self.query_log]
         ax1.plot(iterations, ratios, linewidth=2, color='purple', marker='o', markersize=3, alpha=0.7)
         ax1.axhline(y=3.0, color='red', linestyle='--', label='Target: 3.0x', alpha=0.5)
         ax1.set_xlabel('Iteration Number', fontsize=11)
@@ -1208,7 +1218,6 @@ class HybridDualAgentTrainer:
         
         # Plot 2: Auto-label Rate
         ax2 = fig.add_subplot(gs[0, 1])
-        auto_rates = [log['auto_rate'] for log in self.query_log]
         ax2.plot(iterations, auto_rates, linewidth=2, color='green', marker='s', markersize=3, alpha=0.7)
         ax2.set_xlabel('Iteration Number', fontsize=11)
         ax2.set_ylabel('Auto-label Rate (%)', fontsize=11)
@@ -1217,7 +1226,6 @@ class HybridDualAgentTrainer:
         
         # Plot 3: Graph Growth
         ax3 = fig.add_subplot(gs[1, 0])
-        edges = [log['graph_edges'] for log in self.query_log]
         ax3.plot(iterations, edges, linewidth=2, color='blue', marker='^', markersize=3, alpha=0.7)
         ax3.set_xlabel('Iteration Number', fontsize=11)
         ax3.set_ylabel('Total Graph Edges', fontsize=11)
@@ -1226,7 +1234,6 @@ class HybridDualAgentTrainer:
         
         # Plot 4: Ensemble Uncertainty
         ax4 = fig.add_subplot(gs[1, 1])
-        stds = [log['ensemble_std_mean'] for log in self.query_log]
         ax4.plot(iterations, stds, linewidth=2, color='orange', marker='d', markersize=3, alpha=0.7)
         ax4.set_xlabel('Iteration Number', fontsize=11)
         ax4.set_ylabel('Mean Uncertainty (σ)', fontsize=11)
@@ -1236,8 +1243,11 @@ class HybridDualAgentTrainer:
         # Plot 5: Reward Model Accuracy
         ax5 = fig.add_subplot(gs[2, 0])
         if len(self.reward_correlations) > 0:
-            corr_iters = [c['iteration'] for c in self.reward_correlations]
-            corr_vals = [c['correlation'] for c in self.reward_correlations]
+            # CRITICAL FIX: Sort correlations by iteration
+            sorted_corrs = sorted(self.reward_correlations, key=lambda x: x['iteration'])
+            corr_iters = [c['iteration'] for c in sorted_corrs]
+            corr_vals = [c['correlation'] for c in sorted_corrs]
+            
             ax5.plot(corr_iters, corr_vals, linewidth=2, color='crimson', marker='o', markersize=4)
             ax5.axhline(y=0.9, color='green', linestyle='--', label='Target: 0.9', alpha=0.5)
             ax5.set_xlabel('Human Queries', fontsize=11)
@@ -1252,9 +1262,11 @@ class HybridDualAgentTrainer:
         # Plot 6: Agent Performance
         ax6 = fig.add_subplot(gs[2, 1])
         if len(self.sac_performance) > 0:
-            perf_steps = [p['step'] for p in self.sac_performance]
-            perf_rewards = [p['avg_reward'] for p in self.sac_performance]
-            perf_rounds = [p['round'] for p in self.sac_performance]
+            # CRITICAL FIX: Sort performance by step
+            sorted_perf = sorted(self.sac_performance, key=lambda x: x['step'])
+            perf_steps = [p['step'] for p in sorted_perf]
+            perf_rewards = [p['avg_reward'] for p in sorted_perf]
+            perf_rounds = [p['round'] for p in sorted_perf]
             
             # Color by round
             scatter = ax6.scatter(perf_steps, perf_rewards, c=perf_rounds, cmap='viridis', 
@@ -1283,14 +1295,15 @@ class HybridDualAgentTrainer:
         plt.close()
     
     def plot_dual_agent_stats(self, save_path='diagnostics/dual_agent_stats.png'):
-        """Plot dual-agent specific statistics (Doc 2 Feature)"""
+        """Plot dual-agent specific statistics (Doc 2 Feature) - FIXED SORTING"""
         if len(self.loop_stats) == 0:
             print("     No dual-agent stats to plot.")
             return
         
         print(f"   Generating dual-agent diagnostic plots...")
         
-        df = pd.DataFrame(self.loop_stats)
+        # CRITICAL FIX: Sort by round when creating DataFrame
+        df = pd.DataFrame(self.loop_stats).sort_values('round')
         
         fig, axes = plt.subplots(2, 2, figsize=(14, 10))
         fig.suptitle('Dual-Agent Statistics Across Rounds', fontsize=14, fontweight='bold')

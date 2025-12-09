@@ -10,9 +10,21 @@ import json
 class ExperimentRecovery:
     """Recover and regenerate all diagnostics from checkpoints and logs"""
     
-    def __init__(self, checkpoint_dir="checkpoints", log_file="final_results.txt"):
+    def __init__(self, checkpoint_dir="checkpoints", log_file=None):
         self.checkpoint_dir = Path(checkpoint_dir)
-        self.log_file = Path(log_file)
+        
+        # Auto-detect log file: try logs/training_output.txt first, then final_results.txt
+        if log_file is None:
+            if Path("logs/training_output.txt").exists():
+                self.log_file = Path("logs/training_output.txt")
+            elif Path("final_results.txt").exists():
+                self.log_file = Path("final_results.txt")
+            else:
+                self.log_file = None
+                print("⚠ Warning: No log file found (tried logs/training_output.txt and final_results.txt)")
+        else:
+            self.log_file = Path(log_file)
+        
         self.data = {
             'query_log': [],
             'defender_changes': [],
@@ -95,8 +107,9 @@ class ExperimentRecovery:
         print("PARSING TERMINAL OUTPUT")
         print("=" * 70)
         
-        if not self.log_file.exists():
+        if self.log_file is None or not self.log_file.exists():
             print(f"✗ Log file not found: {self.log_file}")
+            print("  Skipping terminal output parsing...")
             return
         
         with open(self.log_file, 'r', encoding='utf-8') as f:
@@ -226,8 +239,8 @@ class ExperimentRecovery:
         
         # Plot 1: Augmentation Ratio
         ax1 = fig.add_subplot(gs[0, 0])
-        for round_num in df_query['round'].unique():
-            round_data = df_query[df_query['round'] == round_num]
+        for round_num in sorted(df_query['round'].unique()):
+            round_data = df_query[df_query['round'] == round_num].sort_values('iteration')
             ax1.plot(round_data['iteration'], round_data['augmentation'], 
                     marker='o', markersize=3, alpha=0.7, label=f'Round {round_num}')
         ax1.axhline(y=3.0, color='red', linestyle='--', label='Target: 3.0x', alpha=0.5)
@@ -239,8 +252,8 @@ class ExperimentRecovery:
         
         # Plot 2: Auto-label Rate
         ax2 = fig.add_subplot(gs[0, 1])
-        for round_num in df_query['round'].unique():
-            round_data = df_query[df_query['round'] == round_num]
+        for round_num in sorted(df_query['round'].unique()):
+            round_data = df_query[df_query['round'] == round_num].sort_values('iteration')
             ax2.plot(round_data['iteration'], round_data['auto_rate'], 
                     marker='s', markersize=3, alpha=0.7, label=f'Round {round_num}')
         ax2.set_xlabel('Iteration Number')
@@ -251,8 +264,8 @@ class ExperimentRecovery:
         
         # Plot 3: Graph Growth
         ax3 = fig.add_subplot(gs[1, 0])
-        for round_num in df_query['round'].unique():
-            round_data = df_query[df_query['round'] == round_num]
+        for round_num in sorted(df_query['round'].unique()):
+            round_data = df_query[df_query['round'] == round_num].sort_values('iteration')
             ax3.plot(round_data['iteration'], round_data['graph_edges'], 
                     marker='^', markersize=3, alpha=0.7, label=f'Round {round_num}')
         ax3.set_xlabel('Iteration Number')
@@ -263,8 +276,8 @@ class ExperimentRecovery:
         
         # Plot 4: Ensemble Uncertainty
         ax4 = fig.add_subplot(gs[1, 1])
-        for round_num in df_query['round'].unique():
-            round_data = df_query[df_query['round'] == round_num]
+        for round_num in sorted(df_query['round'].unique()):
+            round_data = df_query[df_query['round'] == round_num].sort_values('iteration')
             ax4.plot(round_data['iteration'], round_data['ensemble_std_mean'], 
                     marker='d', markersize=3, alpha=0.7, label=f'Round {round_num}')
         ax4.set_xlabel('Iteration Number')
@@ -275,7 +288,8 @@ class ExperimentRecovery:
         
         # Plot 5: Reward Model Accuracy
         ax5 = fig.add_subplot(gs[2, 0])
-        ax5.plot(df_corr['iteration'], df_corr['correlation'], 
+        df_corr_sorted = df_corr.sort_values('iteration')
+        ax5.plot(df_corr_sorted['iteration'], df_corr_sorted['correlation'], 
                 linewidth=2, color='crimson', marker='o', markersize=4)
         ax5.axhline(y=0.9, color='green', linestyle='--', label='Target: 0.9', alpha=0.5)
         ax5.set_xlabel('Human Queries')
@@ -287,13 +301,14 @@ class ExperimentRecovery:
         
         # Plot 6: Agent Performance
         ax6 = fig.add_subplot(gs[2, 1])
-        scatter = ax6.scatter(df_perf['step'], df_perf['avg_reward'], 
-                            c=df_perf['round'], cmap='viridis', 
+        df_perf_sorted = df_perf.sort_values('step')
+        scatter = ax6.scatter(df_perf_sorted['step'], df_perf_sorted['avg_reward'], 
+                            c=df_perf_sorted['round'], cmap='viridis', 
                             s=50, alpha=0.7, edgecolors='black', linewidth=0.5)
         
         # Add trendline per round
-        for round_num in df_perf['round'].unique():
-            round_data = df_perf[df_perf['round'] == round_num]
+        for round_num in sorted(df_perf['round'].unique()):
+            round_data = df_perf[df_perf['round'] == round_num].sort_values('step')
             ax6.plot(round_data['step'], round_data['avg_reward'], 
                     linewidth=1.5, alpha=0.5)
         
@@ -311,6 +326,7 @@ class ExperimentRecovery:
     def _plot_dual_agent_stats(self, output_dir):
         """Plot dual-agent statistics"""
         df = pd.DataFrame(self.data['dual_agent_stats'])
+        df = df.sort_values('round')
         
         fig, axes = plt.subplots(2, 2, figsize=(14, 10))
         fig.suptitle('Dual-Agent Statistics Across Rounds', fontsize=14, fontweight='bold')
@@ -423,7 +439,7 @@ class ExperimentRecovery:
             axes = [axes]
         
         for i, round_num in enumerate(range(1, n_rounds + 1)):
-            round_data = df[df['round'] == round_num]
+            round_data = df[df['round'] == round_num].sort_values('iteration')
             
             ax = axes[i]
             ax2 = ax.twinx()
@@ -529,8 +545,8 @@ class ExperimentRecovery:
 
 
 if __name__ == "__main__":
+    # Auto-detect log file (will try logs/training_output.txt first)
     recovery = ExperimentRecovery(
-        checkpoint_dir="checkpoints",
-        log_file="final_results.txt"
+        checkpoint_dir="checkpoints"
     )
     recovery.run_full_recovery()

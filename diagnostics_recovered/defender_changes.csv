@@ -1,0 +1,5 @@
+type,old_id,old_source,new_id,new_source
+Natural Dethrone,6,Entropy,18,Entropy
+Human Query Dethrone,18,Entropy,157,SAC
+Human Query Dethrone,157,SAC,144,SAC
+Human Query Dethrone,144,SAC,137,SAC
