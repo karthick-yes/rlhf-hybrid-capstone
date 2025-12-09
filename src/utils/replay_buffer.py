@@ -10,7 +10,7 @@ class ReplayBuffer:
         self.trajectories = {}  # ID -> (states, actions, cumulative_reward)
         self.next_id = 0
     
-    def add_trajectory(self, states, actions, cumulative_reward):
+    def add_trajectory(self, states, actions, cumulative_reward, terminals):
         """
         Add a trajectory segment.
         
@@ -26,7 +26,8 @@ class ReplayBuffer:
         self.trajectories[traj_id] = {
             'states': states,
             'actions': actions,
-            'cumulative_reward': cumulative_reward
+            'cumulative_reward': cumulative_reward,
+            'terminals': terminals
         }
         self.next_id += 1
         

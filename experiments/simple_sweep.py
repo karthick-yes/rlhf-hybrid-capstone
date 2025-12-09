@@ -1,6 +1,8 @@
 """
 Hyperparameter Sweep for CartPole
 Systematically tests different configurations to find optimal settings
+
+TO BE DELETED
 """
 
 import sys

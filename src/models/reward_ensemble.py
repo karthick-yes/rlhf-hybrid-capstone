@@ -16,7 +16,8 @@ class RewardNetwork(nn.Module):
             nn.LeakyReLU(),
             nn.Linear(hidden_dim, hidden_dim),
             nn.LeakyReLU(),
-            nn.Linear(hidden_dim, 1)
+            nn.Linear(hidden_dim, 1),
+            nn.Tanh()
         )
     
     def forward(self, state, action):

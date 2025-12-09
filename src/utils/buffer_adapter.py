@@ -43,6 +43,7 @@ class SACBufferAdapter:
             traj = trajectory_buffer.get_trajectory(tid)
             states = traj['states']     # Shape: [T, dim]
             actions = traj['actions']   # Shape: [T, dim]
+            terminals = traj['terminals']
             
             # Convert to tensor for reward prediction
             s_t = torch.FloatTensor(states).to(self.device)
@@ -76,23 +77,33 @@ class SACBufferAdapter:
     
     # ✅ PHASE 3: NORMALIZE AND FLATTEN
         for tid in all_ids:
+            traj = trajectory_buffer.get_trajectory(tid)  # Get full trajectory to access terminals
             data = trajectory_data[tid]
             states = data['states']
             actions = data['actions']
             raw_rewards = data['raw_rewards']
+            terminals = traj['terminals']  # Extract the true termination flags
         
-        # Normalize using GLOBAL statistics
             #learned_rewards = (raw_rewards - reward_mean) / reward_std    
             learned_rewards = raw_rewards
             # --- FLATTEN LOOP ---
             T = len(states)
             for t in range(T - 1):
+                # CRITICAL FIX:
+                # The done flag indicates whether next_state (s[t+1]) is terminal.
+                # terminals[t] stores whether taking action a[t] from s[t] resulted in true termination.
+                # If this is the last transition (t == T-2), check terminals[t].
+                # If terminals[t] is 0 (Timeout), done=0 -> Bootstrap!
+                # If terminals[t] is 1 (True Death), done=1 -> No Bootstrap.
+                is_final_step = (t == T - 2)
+                done_flag = terminals[t+1] if is_final_step else 0.0
+                
                 self.add(
                     states[t], 
                     actions[t], 
                     learned_rewards[t,0], # The NEW learned reward
                     states[t+1], 
-                    0.0 if t < T-2 else 1.0 # Simple done logic
+                    done_flag  # Use the correct flag based on terminals
                 )
                 
         print(f"   [Adapter] Flattened into {self.size} transitions for SAC.")

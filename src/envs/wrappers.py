@@ -22,7 +22,7 @@ class SegmentWrapper:
         elif env_name.startswith('metaworld'):
             import metaworld
             task_name = env_name.replace('metaworld-', '')
-            if not task_name.endswith('-v2'): task_name += '-v2'
+            if not task_name.endswith('-v3'): task_name += '-v3'
             ml1 = metaworld.ML1(task_name)
             self.env = ml1.train_classes[task_name]()
             task = ml1.train_tasks[0]
@@ -82,6 +82,7 @@ class SegmentWrapper:
         if max_steps is None: max_steps = self.segment_length
         
         states, actions, rewards = [], [], []
+        terminals = []
         state, _ = self.reset()
         done = False
         steps = 0
@@ -97,11 +98,12 @@ class SegmentWrapper:
             states.append(state)
             actions.append(action) # Store the CONTINUOUS action for training
             rewards.append(reward)
+            terminals.append(float(term))
             
             state = next_state
             steps += 1
         
-        return np.array(states), np.array(actions), np.sum(rewards)
+        return np.array(states), np.array(actions), np.sum(rewards), np.array(terminals)
 
 def make_env(env_name, segment_length=50, seed=None):
     return SegmentWrapper(env_name, segment_length, seed)

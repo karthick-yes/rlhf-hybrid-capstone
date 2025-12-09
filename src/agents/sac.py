@@ -5,7 +5,10 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.distributions import Normal
 
-# Standard Continuous SAC Components
+#Dual Agent 
+# ==========================================
+# 1. Standard Continuous SAC Components
+# ==========================================
 
 class Actor(nn.Module):
     def __init__(self, state_dim, action_dim, hidden=256):
@@ -18,8 +21,6 @@ class Actor(nn.Module):
         self.log_std = nn.Linear(hidden, action_dim)
         torch.nn.init.uniform_(self.mean.weight, -1e-3, 1e-3)
         torch.nn.init.uniform_(self.mean.bias, -1e-3, 1e-3)
-        
-        
         
     def forward(self, x):
         x = self.base(x)
@@ -60,17 +61,20 @@ class Critic(nn.Module):
         x = torch.cat([s, a], 1)
         return self.q1(x), self.q2(x)
 
+# ==========================================
+# 2. SAC Agent with Automatic Entropy Tuning
+# ==========================================
+
 class SAC:
     """
-    Standard Continuous SAC.
-    Relies on the Environment Wrapper to handle discrete conversions.
+    Standard Continuous SAC with Automatic Entropy Tuning.
     """
-    def __init__(self, state_dim, action_dim, is_discrete=False, device='cpu', lr=3e-4, gamma=0.99, tau=0.005, alpha=0.2):
+    def __init__(self, state_dim, action_dim, is_discrete=False, device='cpu', 
+                 lr=3e-4, gamma=0.99, tau=0.005, alpha=0.2, 
+                 automatic_entropy_tuning=True):
         self.device = device
         self.gamma = gamma
         self.tau = tau
-        self.alpha = alpha
-        
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.lr = lr  
@@ -84,6 +88,18 @@ class SAC:
         
         self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=lr)
         self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=lr)
+
+        # --- Automatic Entropy Tuning (The Fix) ---
+        self.automatic_entropy_tuning = automatic_entropy_tuning
+        if self.automatic_entropy_tuning:
+            # Target entropy is usually -dim(A)
+            self.target_entropy = -float(action_dim)
+            # We optimize log_alpha to ensure alpha is always positive
+            self.log_alpha = torch.zeros(1, requires_grad=True, device=device)
+            self.alpha_optimizer = optim.Adam([self.log_alpha], lr=lr)
+            self.alpha = self.log_alpha.exp().item()
+        else:
+            self.alpha = alpha
 
     def select_action(self, state, deterministic=False):
         state_t = torch.FloatTensor(state).to(self.device)
@@ -107,11 +123,20 @@ class SAC:
         next_states = torch.FloatTensor(next_states).to(self.device)
         dones = torch.FloatTensor(dones).to(self.device)
 
+        # Get current alpha (Dynamic or Fixed)
+        if self.automatic_entropy_tuning:
+            alpha = self.log_alpha.exp()
+        else:
+            alpha = self.alpha
+
+        # ----------------------------
         # 1. Update Critic
+        # ----------------------------
         with torch.no_grad():
             next_actions, next_log_probs = self.actor.sample(next_states)
             q1_target, q2_target = self.critic_target(next_states, next_actions)
-            q_target = torch.min(q1_target, q2_target) - self.alpha * next_log_probs
+            # Use dynamic alpha to scale the entropy bonus
+            q_target = torch.min(q1_target, q2_target) - alpha * next_log_probs
             target = rewards + (1 - dones) * self.gamma * q_target
         
         q1, q2 = self.critic(states, actions)
@@ -122,14 +147,19 @@ class SAC:
         torch.nn.utils.clip_grad_norm_(self.critic.parameters(), max_norm=1.0)
         self.critic_optimizer.step()
 
+        # ----------------------------
         # 2. Update Actor
-        # Freeze critic
+        # ----------------------------
+        # Freeze critic so we don't waste compute on gradients we don't use
         for p in self.critic.parameters(): p.requires_grad = False
         
         new_actions, log_probs = self.actor.sample(states)
         q1_new, q2_new = self.critic(states, new_actions)
         q_new = torch.min(q1_new, q2_new)
-        actor_loss = (self.alpha * log_probs - q_new).mean()
+        
+        # Actor maximizes: Q(s,a) - alpha * log_pi(a|s)
+        # Loss minimizes: alpha * log_pi - Q
+        actor_loss = (alpha * log_probs - q_new).mean()
         
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
@@ -139,7 +169,25 @@ class SAC:
         # Unfreeze critic
         for p in self.critic.parameters(): p.requires_grad = True
 
-        # 3. Soft Update
+        # ----------------------------
+        # 3. Update Alpha (Automatic Tuning)
+        # ----------------------------
+        if self.automatic_entropy_tuning:
+            # Alpha Loss: Minimize alpha * (entropy - target_entropy)
+            # Note: entropy = -log_probs
+            # So we minimize: -alpha * (log_probs + target_entropy)
+            alpha_loss = -(self.log_alpha * (log_probs + self.target_entropy).detach()).mean()
+            
+            self.alpha_optimizer.zero_grad()
+            alpha_loss.backward()
+            self.alpha_optimizer.step()
+            
+            # Update internal scalar for logging/reference
+            self.alpha = self.log_alpha.exp().item()
+
+        # ----------------------------
+        # 4. Soft Update
+        # ----------------------------
         for param, target_param in zip(self.critic.parameters(), self.critic_target.parameters()):
             target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
 

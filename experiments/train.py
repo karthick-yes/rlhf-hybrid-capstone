@@ -51,6 +51,7 @@ def load_config(config_path):
         with open(config_path, 'r', encoding='utf-8') as f:
             config = yaml.safe_load(f)
         
+        #not robust enough. Could miss out on values if not hardcoded.
         numeric_keys = ['lr', 'beta', 'weight_decay', 'gamma', 'tau', 'alpha',
                         'min_warmup_reward', 'max_defender_uncertainty', 
                         'exploration_epsilon', 'std_threshold']
@@ -233,14 +234,7 @@ class HybridDualAgentTrainer:
         print(f"   Checkpoint saved: {path}")
 
     # ==================== COLLECTION HELPER (Doc 2 Architecture) ====================
-    
     def _collect_and_store(self, agent, n_episodes, label="Unknown"):
-        """
-        Collects full episodes using max_episode_steps, stores in buffer, 
-        and tags the source (SAC or Entropy).
-        
-        Returns: all_states (concatenated for knowledge sharing)
-        """
         new_ids = []
         all_states = []
         rewards = []
@@ -250,44 +244,58 @@ class HybridDualAgentTrainer:
             iterator = tqdm(iterator, desc=f"   Collecting ({label})", leave=False, unit="ep")
 
         for _ in iterator:
-            # Use max_episode_steps for full task execution
+            # 1. Collect Data
             if label == "Entropy":
+                # Entropy agent returns 5 values (No terminals array)
                 states, actions, int_r, ext_r, _ = agent.collect_trajectory(
                     self.env.env, 
                     max_steps=self.max_episode_steps
                 )
                 true_reward = np.sum(ext_r)
+                # 'terminals' is undefined here intentionally; we fix it below
+                terminals = None 
             else:
-                # SAC Agent
-                states, actions, true_reward = self.env.collect_segment(
+                # SAC Agent (Wrapper returns 4 values including terminals)
+                states, actions, true_reward, terminals = self.env.collect_segment(
                     policy=lambda s: agent.select_action(s, deterministic=False),
                     max_steps=self.max_episode_steps
                 )
             
-            # Store full trajectory
-            tid = self.pref_buffer.add_trajectory(states, actions, float(true_reward))
+            # 2. UNIVERSAL TERMINAL FIX (The Critical Patch)
+            # If terminals wasn't returned (Entropy) or is wrong format, build it manually.
+            if terminals is None or isinstance(terminals, (int, float)):
+                T = len(states)
+                terminals = np.zeros(T, dtype=np.float32)
+                
+                # Logic: If episode ended early (< 500 steps), it died (1.0).
+                #        If it lasted full 500 steps, it timed out (0.0).
+                if T < self.max_episode_steps:
+                    terminals[-1] = 1.0  # True Death
+                else:
+                    terminals[-1] = 0.0  # Time Limit (Infinite Bootstrap)
+
+            # 3. Store full trajectory with the valid 'terminals' array
+            tid = self.pref_buffer.add_trajectory(
+                states, 
+                actions, 
+                float(true_reward), 
+                terminals # Now guaranteed to be an array [T, 1]
+            )
             
-            # Tag Source (Doc 2 feature)
+            # Tag Source
             self.traj_sources[tid] = label
             
             new_ids.append(tid)
             rewards.append(true_reward)
             all_states.append(states)
         
-        # Stats (Doc 1 verbosity)
         if rewards:
             print(f"   {label} Collection: {len(rewards)} episodes, "
-                  f"Avg Reward: {np.mean(rewards):.1f}, Max: {np.max(rewards):.1f}, "
-                  f"Min: {np.min(rewards):.1f}, Std: {np.std(rewards):.1f}")
+                  f"Avg Reward: {np.mean(rewards):.1f}, Max: {np.max(rewards):.1f}")
         
         if len(all_states) > 0:
             return np.concatenate(all_states, axis=0)
         return np.array([])
-
-    def _compute_true_reward(self, rewards):
-        """Helper for reward computation"""
-        return float(np.sum(rewards))
-
     # ==================== PHASE 1: WARMUP (Doc 1 Safety Checks) ====================
     
     def phase1_warmup(self, n_episodes=None, retries=0):
@@ -441,41 +449,98 @@ class HybridDualAgentTrainer:
         
         self.save_checkpoint("bootstrap_done")
 
-    def update_defender(self):
+    def update_defender(self, force_model_based=False):
         """
-        Select best trajectory based on current Reward Model.
-        Uses heuristic sampling for efficiency (Doc 2 approach).
+        Select the best trajectory to be the 'Defender' (Root) for the next round.
+        
+        Args:
+            force_model_based (bool): If True, skip PageRank and strictly use 
+                                      Reward Model predictions (Argmax).
         """
         all_ids = self.pref_buffer.get_all_ids()
         if not all_ids:
             print("     Warning: No trajectories available for defender update")
             return
-            
-        best_id, best_val = None, -float('inf')
+
+        # ---------------------------------------------------------------------
+        # 1. COMPUTE MODEL SCORES (The "Student's" Opinion)
+        # ---------------------------------------------------------------------
+        # CRITICAL FIX: Scan ALL IDs. Do not sample. 
+        # Sampling caused the "Missing Golden Trajectory" bug.
+        # Computational Cost: Negligible (seconds) vs SAC Training (minutes).
         
-        # Heuristic: Check recent 100 + random 50 to balance recency and diversity
-        candidates = list(all_ids[-100:])
-        if len(all_ids) > 100:
-            remaining = [tid for tid in all_ids[:-100]]
-            if len(remaining) > 50:
-                candidates += list(np.random.choice(remaining, 50, replace=False))
-            else:
-                candidates += remaining
+        best_model_id = None
+        best_model_val = -float('inf')
+        
+        # Optimization: If buffer > 10k, maybe sample 10k recent, 
+        # but for MetaWorld (<2k total), scanning all is safe.
+        candidates = all_ids 
         
         for tid in candidates:
             mu, _ = self.compute_ensemble_stats(tid)
-            if mu > best_val:
-                best_val = mu
-                best_id = tid
+            if mu > best_model_val:
+                best_model_val = mu
+                best_model_id = tid
+
+        # ---------------------------------------------------------------------
+        # 2. COMPUTE PAGERANK (The "Graph's" Opinion)
+        # ---------------------------------------------------------------------
+        best_pagerank_id = None
+        try:
+            if len(self.graph.G) > 0:
+                # Reverse graph so edges point to Winners. Higher PageRank = More Wins.
+                scores = nx.pagerank(self.graph.G.reverse())
+                if scores:
+                    best_pagerank_id = max(scores.items(), key=lambda x: x[1])[0]
+        except Exception as e:
+            # PageRank can fail on empty/disconnected graphs
+            pass
+
+        # ---------------------------------------------------------------------
+        # 3. SELECTION LOGIC
+        # ---------------------------------------------------------------------
         
-        self.defender_id = best_id
+        # Heuristic: Is the model "fresh" (untrained)?
+        # If we are close to the bootstrap amount, the model is likely weak.
+        bootstrap_amount = self.config.get('n_bootstrap', 50)
+        is_fresh_bootstrap = (self.total_human_queries <= bootstrap_amount + 20)
         
-        # Log Source of Defender (Doc 2 Feature + Doc 1 Verbosity)
+        # DECISION TREE
+        if force_model_based:
+            # CASE A: User forced Model-Based (Standard SOTA behavior)
+            self.defender_id = best_model_id
+            selection_method = "Reward Model (Forced)"
+            
+        elif is_fresh_bootstrap and best_pagerank_id is not None:
+            # CASE B: Early Training -> Trust Graph (Warm Start)
+            self.defender_id = best_pagerank_id
+            selection_method = "PageRank (Warm Start)"
+            
+        else:
+            # CASE C: Late Training -> Trust Model (Generalization)
+            self.defender_id = best_model_id
+            selection_method = "Reward Model (Argmax)"
+
+        # Fallback if everything failed (e.g. empty graph and model returns -inf)
+        if self.defender_id is None:
+            self.defender_id = all_ids[-1] # Pick most recent
+            selection_method = "Fallback (Recent)"
+
+        # ---------------------------------------------------------------------
+        # 4. LOGGING & VERIFICATION
+        # ---------------------------------------------------------------------
         source = self.traj_sources.get(self.defender_id, 'Unknown')
         true_reward = self.pref_buffer.get_trajectory(self.defender_id)['cumulative_reward']
+        
         print(f"     Defender Updated: {self.defender_id} ({source})")
-        print(f"      - Predicted Reward: {best_val:.1f}")
+        print(f"      - Selection Method: {selection_method}")
+        print(f"      - Model Prediction: {best_model_val:.3f} (Best Model ID: {best_model_id})")
         print(f"      - True Reward:      {true_reward:.1f}")
+        
+        # SAFETY CHECK: Print if we ignored a empirically better option
+        if best_pagerank_id and self.defender_id != best_pagerank_id:
+             pr_reward = self.pref_buffer.get_trajectory(best_pagerank_id)['cumulative_reward']
+             print(f" [Info] PageRank winner was {best_pagerank_id} (r={pr_reward:.1f})")
 
     # ==================== COMPUTE STATS (Doc 1 Diagnostics) ====================
     
