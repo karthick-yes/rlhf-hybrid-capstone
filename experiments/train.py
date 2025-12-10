@@ -1183,9 +1183,8 @@ class HybridDualAgentTrainer:
         print(f"{'='*70}\n")
         
         return avg_rnd, avg_agt
-
     def plot_diagnostics(self, save_path='diagnostics/diagnostics.png'):
-        """Enhanced diagnostics with 6 plots (Doc 1) - FIXED SORTING"""
+        """Enhanced diagnostics with 6 plots (Doc 1) - FIXED SORTING AND ROUND SEPARATION"""
         if len(self.query_log) == 0:
             print("     No query log data to plot.")
             return
@@ -1195,7 +1194,7 @@ class HybridDualAgentTrainer:
         fig = plt.figure(figsize=(18, 12))
         gs = fig.add_gridspec(3, 2, hspace=0.3, wspace=0.3)
         
-        # CRITICAL FIX: Sort query_log by round and iteration before extracting
+        # Sort query_log by round and iteration before extracting
         sorted_logs = sorted(self.query_log, key=lambda x: (x['round'], x['iteration']))
         
         # Extract data from sorted logs
@@ -1206,9 +1205,16 @@ class HybridDualAgentTrainer:
         edges = [log['graph_edges'] for log in sorted_logs]
         stds = [log['ensemble_std_mean'] for log in sorted_logs]
         
-        # Plot 1: Augmentation Ratio
+        # Get unique rounds
+        unique_rounds = sorted(set(rounds))
+        
+        # Plot 1: Augmentation Ratio - BY ROUND
         ax1 = fig.add_subplot(gs[0, 0])
-        ax1.plot(iterations, ratios, linewidth=2, color='purple', marker='o', markersize=3, alpha=0.7)
+        for round_num in unique_rounds:
+            round_mask = [r == round_num for r in rounds]
+            round_iters = [iterations[i] for i in range(len(iterations)) if round_mask[i]]
+            round_ratios = [ratios[i] for i in range(len(ratios)) if round_mask[i]]
+            ax1.plot(round_iters, round_ratios, marker='o', markersize=3, alpha=0.7, label=f'Round {round_num}')
         ax1.axhline(y=3.0, color='red', linestyle='--', label='Target: 3.0x', alpha=0.5)
         ax1.set_xlabel('Iteration Number', fontsize=11)
         ax1.set_ylabel('Augmentation Ratio', fontsize=11)
@@ -1216,34 +1222,49 @@ class HybridDualAgentTrainer:
         ax1.legend()
         ax1.grid(alpha=0.3)
         
-        # Plot 2: Auto-label Rate
+        # Plot 2: Auto-label Rate - BY ROUND
         ax2 = fig.add_subplot(gs[0, 1])
-        ax2.plot(iterations, auto_rates, linewidth=2, color='green', marker='s', markersize=3, alpha=0.7)
+        for round_num in unique_rounds:
+            round_mask = [r == round_num for r in rounds]
+            round_iters = [iterations[i] for i in range(len(iterations)) if round_mask[i]]
+            round_auto = [auto_rates[i] for i in range(len(auto_rates)) if round_mask[i]]
+            ax2.plot(round_iters, round_auto, marker='s', markersize=3, alpha=0.7, label=f'Round {round_num}')
         ax2.set_xlabel('Iteration Number', fontsize=11)
         ax2.set_ylabel('Auto-label Rate (%)', fontsize=11)
         ax2.set_title('UCB/LCB Filter Efficiency', fontsize=12, fontweight='bold')
+        ax2.legend()
         ax2.grid(alpha=0.3)
         
-        # Plot 3: Graph Growth
+        # Plot 3: Graph Growth - BY ROUND
         ax3 = fig.add_subplot(gs[1, 0])
-        ax3.plot(iterations, edges, linewidth=2, color='blue', marker='^', markersize=3, alpha=0.7)
+        for round_num in unique_rounds:
+            round_mask = [r == round_num for r in rounds]
+            round_iters = [iterations[i] for i in range(len(iterations)) if round_mask[i]]
+            round_edges = [edges[i] for i in range(len(edges)) if round_mask[i]]
+            ax3.plot(round_iters, round_edges, marker='^', markersize=3, alpha=0.7, label=f'Round {round_num}')
         ax3.set_xlabel('Iteration Number', fontsize=11)
         ax3.set_ylabel('Total Graph Edges', fontsize=11)
         ax3.set_title('Preference Graph Growth', fontsize=12, fontweight='bold')
+        ax3.legend()
         ax3.grid(alpha=0.3)
         
-        # Plot 4: Ensemble Uncertainty
+        # Plot 4: Ensemble Uncertainty - BY ROUND
         ax4 = fig.add_subplot(gs[1, 1])
-        ax4.plot(iterations, stds, linewidth=2, color='orange', marker='d', markersize=3, alpha=0.7)
+        for round_num in unique_rounds:
+            round_mask = [r == round_num for r in rounds]
+            round_iters = [iterations[i] for i in range(len(iterations)) if round_mask[i]]
+            round_stds = [stds[i] for i in range(len(stds)) if round_mask[i]]
+            ax4.plot(round_iters, round_stds, marker='d', markersize=3, alpha=0.7, label=f'Round {round_num}')
         ax4.set_xlabel('Iteration Number', fontsize=11)
         ax4.set_ylabel('Mean Uncertainty (σ)', fontsize=11)
         ax4.set_title('Ensemble Uncertainty Over Time', fontsize=12, fontweight='bold')
+        ax4.legend()
         ax4.grid(alpha=0.3)
         
-        # Plot 5: Reward Model Accuracy
+        # Plot 5: Reward Model Accuracy (This is cumulative across all rounds - single line)
         ax5 = fig.add_subplot(gs[2, 0])
         if len(self.reward_correlations) > 0:
-            # CRITICAL FIX: Sort correlations by iteration
+            # Sort correlations by iteration (these are cumulative human queries)
             sorted_corrs = sorted(self.reward_correlations, key=lambda x: x['iteration'])
             corr_iters = [c['iteration'] for c in sorted_corrs]
             corr_vals = [c['correlation'] for c in sorted_corrs]
@@ -1259,10 +1280,10 @@ class HybridDualAgentTrainer:
             ax5.text(0.5, 0.5, 'No correlation data', ha='center', va='center', fontsize=12)
             ax5.set_title('Reward Model Accuracy', fontsize=12, fontweight='bold')
         
-        # Plot 6: Agent Performance
+        # Plot 6: Agent Performance (colored by round, cumulative x-axis)
         ax6 = fig.add_subplot(gs[2, 1])
         if len(self.sac_performance) > 0:
-            # CRITICAL FIX: Sort performance by step
+            # Sort performance by step
             sorted_perf = sorted(self.sac_performance, key=lambda x: x['step'])
             perf_steps = [p['step'] for p in sorted_perf]
             perf_rewards = [p['avg_reward'] for p in sorted_perf]
@@ -1271,7 +1292,13 @@ class HybridDualAgentTrainer:
             # Color by round
             scatter = ax6.scatter(perf_steps, perf_rewards, c=perf_rounds, cmap='viridis', 
                                  s=50, alpha=0.7, edgecolors='black', linewidth=0.5)
-            ax6.plot(perf_steps, perf_rewards, linewidth=1.5, color='green', alpha=0.5)
+            
+            # Add trendline per round
+            for round_num in sorted(set(perf_rounds)):
+                round_mask = [r == round_num for r in perf_rounds]
+                round_steps = [perf_steps[i] for i in range(len(perf_steps)) if round_mask[i]]
+                round_rewards = [perf_rewards[i] for i in range(len(perf_rewards)) if round_mask[i]]
+                ax6.plot(round_steps, round_rewards, linewidth=1.5, alpha=0.5)
             
             # Add random baseline if available
             if hasattr(self, '_random_baseline'):
@@ -1293,6 +1320,7 @@ class HybridDualAgentTrainer:
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
         print(f"    Diagnostics saved: {save_path}")
         plt.close()
+
     
     def plot_dual_agent_stats(self, save_path='diagnostics/dual_agent_stats.png'):
         """Plot dual-agent specific statistics (Doc 2 Feature) - FIXED SORTING"""

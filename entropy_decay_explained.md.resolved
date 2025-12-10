@@ -1,0 +1,240 @@
+# Entropy Decay Mechanism Explained
+
+## Configuration
+
+From [cartpole_conservative.yaml](file:///d:/rlhf-hybrid-capstone/configs/cartpole_conservative.yaml) (lines 20-22):
+```yaml
+sac_collection_episodes: 30      # Episodes collected by SAC (increased from 10)
+entropy_collection_episodes: 5   # Episodes collected by Entropy (reduced from 10)
+entropy_decay: 0.85              # Decay rate per round (NEW)
+```
+
+---
+
+## How Entropy Decay Works
+
+### The Code (train.py, lines 1426-1430)
+
+```python
+# Get base value from config
+base_entropy_eps = self.config.get('entropy_collection_episodes', 10)  # 5 in your case
+
+# Apply exponential decay based on round number
+current_entropy_eps = int(base_entropy_eps * (entropy_decay ** (round_num - 1)))
+
+# Safety floor: always collect at least 1 episode
+current_entropy_eps = max(1, current_entropy_eps)
+
+print(f"> Decay applied: {base_entropy_eps} -> {current_entropy_eps} episodes (Rate: {entropy_decay})")
+```
+
+### The Formula
+
+```
+current_episodes = base_episodes × (decay_rate)^(round - 1)
+```
+
+Where:
+- `base_episodes` = 5 (from config)
+- `decay_rate` = 0.85 (from config)
+- [round](file:///d:/rlhf-hybrid-capstone/analyze_checkpoint.py#429-474) = current round number (1, 2, 3, 4, 5)
+
+---
+
+## Round-by-Round Calculation
+
+| Round | Formula | Calculation | Result | Actual |
+|-------|---------|-------------|--------|--------|
+| 1 | 5 × 0.85^0 | 5 × 1.0 | 5.0 | **5** |
+| 2 | 5 × 0.85^1 | 5 × 0.85 | 4.25 | **4** |
+| 3 | 5 × 0.85^2 | 5 × 0.7225 | 3.61 | **3** |
+| 4 | 5 × 0.85^3 | 5 × 0.614 | 3.07 | **3** |
+| 5 | 5 × 0.85^4 | 5 × 0.522 | 2.61 | **2** |
+
+**Note**: Results are rounded down ([int()](file:///d:/rlhf-hybrid-capstone/src/graph/preference_graph.py#151-173)) and clamped to minimum 1.
+
+---
+
+## Total Episodes Collected
+
+### Per Round
+
+| Round | SAC Episodes | Entropy Episodes | Total New |
+|-------|--------------|------------------|-----------|
+| Warmup| 0            | 100              | 100       |
+| 1     | 30           | 5                | 35        |
+| 2     | 30           | 4                | 34        |
+| 3     | 30           | 3                | 33        |
+| 4     | 30           | 3                | 33        |
+| 5     | 30           | 2                | 32        |
+
+### Cumulative
+
+| After Round | SAC Total | Entropy Total | Buffer Total |
+|-------------|-----------|---------------|--------------|
+| Warmup      | 0         | 100           | 100          |
+| 1           | 30        | 105           | 135          |
+| 2           | 60        | 109           | 169          |
+| 3           | 90        | 112           | 202          |
+| 4           | 120       | 115           | 235          |
+| 5           | 150       | 117           | 267          |
+
+---
+
+## Why Entropy Still Dominates Auto-Rejections
+
+Even with decay, Entropy gets more auto-rejections because:
+
+### 1. Massive Head Start
+- Warmup: 100 Entropy vs 0 SAC
+- This 100-trajectory advantage persists throughout training
+
+### 2. Pool Sampling
+When selecting candidates for comparison:
+```python
+pool = np.random.choice(all_ids, pool_size, replace=False)
+```
+
+**Probability of selecting Entropy trajectory:**
+- After Round 1: 105/135 = 77.8%
+- After Round 2: 109/169 = 64.5%
+- After Round 3: 112/202 = 55.4%
+- After Round 4: 115/235 = 48.9%
+- After Round 5: 117/267 = 43.8%
+
+### 3. Auto-Rejection Logic
+```python
+# If trajectory is clearly worse than defender (UCB < LCB)
+# → Auto-reject without human query
+```
+
+**In early rounds (1-2):**
+- Defender is Entropy (low quality)
+- Most candidates are Entropy (77-64%)
+- Most auto-rejections are Entropy
+
+**In later rounds (3-5):**
+- Defender is SAC (high quality)
+- Pool is more balanced (55-44% Entropy)
+- Both get rejected, but Entropy still more likely
+
+---
+
+## Purpose of Entropy Decay
+
+### Design Rationale
+
+**Early Rounds:**
+- SAC is untrained → produces poor trajectories
+- Entropy provides diverse exploration
+- Need more Entropy to explore state space
+
+**Later Rounds:**
+- SAC is trained → produces high-quality trajectories
+- Entropy becomes noise (low-quality)
+- Reduce Entropy to focus on SAC exploitation
+
+### The Trade-off
+
+```
+Round 1: Exploration > Exploitation (5 Entropy, 30 SAC)
+Round 2: Exploration > Exploitation (4 Entropy, 30 SAC)
+Round 3: Exploration < Exploitation (3 Entropy, 30 SAC)
+Round 4: Exploration < Exploitation (3 Entropy, 30 SAC)
+Round 5: Exploration << Exploitation (2 Entropy, 30 SAC)
+```
+
+---
+
+## Impact on Your Results
+
+### From CSV Data
+
+| Round | Entropy Auto | SAC Auto | Entropy % of Auto |
+|-------|--------------|----------|-------------------|
+| 1     | 5            | 0        | 100%              |
+| 2     | 361          | 33       | 91.6%             |
+| 3     | 345          | 55       | 86.3%             |
+| 4     | 326          | 69       | 82.5%             |
+| 5     | 320          | 68       | 82.5%             |
+
+**Total: 1,357 Entropy vs 225 SAC (85.8% Entropy)**
+
+### Why Decay Doesn't Fix the Imbalance
+
+1. **Warmup dominates**: 100-trajectory head start
+2. **Decay is slow**: 5→4→3→3→2 (only 3 fewer episodes total)
+3. **SAC constant**: 30 episodes every round
+4. **Final ratio**: 117 Entropy vs 150 SAC (still 43.8% Entropy)
+
+---
+
+## Alternative Decay Strategies
+
+### More Aggressive Decay
+
+```yaml
+entropy_decay: 0.5  # Halve each round
+```
+
+| Round | Episodes |
+|-------|----------|
+| 1     | 5        |
+| 2     | 2        |
+| 3     | 1        |
+| 4     | 1        |
+| 5     | 1        |
+
+**Total: 10 Entropy episodes (vs 17 with 0.85 decay)**
+
+### Linear Decay
+
+```python
+current_entropy_eps = max(1, base_entropy_eps - (round_num - 1))
+```
+
+| Round | Episodes |
+|-------|----------|
+| 1     | 5        |
+| 2     | 4        |
+| 3     | 3        |
+| 4     | 2        |
+| 5     | 1        |
+
+**Total: 15 Entropy episodes**
+
+### No Decay (Original)
+
+```yaml
+entropy_decay: 1.0  # No decay
+```
+
+| Round | Episodes |
+|-------|----------|
+| 1-5   | 5 each   |
+
+**Total: 25 Entropy episodes**
+
+---
+
+## Summary
+
+**Current Setup:**
+- `entropy_collection_episodes: 5`
+- `entropy_decay: 0.85`
+- Collects: 5 → 4 → 3 → 3 → 2 episodes per round
+- Total: 17 Entropy episodes across 5 rounds
+
+**Why Entropy Still Dominates:**
+- 100-episode warmup creates permanent imbalance
+- Decay only reduces 5 → 2 (3 fewer episodes)
+- Pool sampling favors majority (Entropy)
+- Auto-rejections reflect buffer composition
+
+**The Decay is Working:**
+- Entropy episodes decrease each round (5→2)
+- SAC eventually catches up (150 vs 117 final)
+- But warmup head start persists throughout training
+
+**Bottom Line:**
+The decay parameter works as designed, but it can't overcome the 100-trajectory Entropy-only warmup. The imbalance you see is primarily from the warmup phase, not from the decay being too slow.

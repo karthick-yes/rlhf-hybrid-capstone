@@ -54,7 +54,7 @@ std_threshold: 5.0          # NEW: Higher threshold for raw reward uncertainty
 
 # ==================== DUAL-AGENT SPECIFIC ====================
 entropy_full_buffer: true   # Knowledge sharing: true = thorough exploration
-force_model_based: true   # If true, always use model predictions (disable PageRank warm start)
+force_model_based: false   # If true, always use model predictions (disable PageRank warm start)
 
 # ==================== REPRODUCIBILITY ====================
 seed: 42

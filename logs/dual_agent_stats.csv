@@ -1,4 +1,4 @@
 round,defender_id,defender_source,defender_true_reward,defender_changes,SAC_Wins,Entropy_Wins,SAC_Auto,Entropy_Auto,SAC_Query,Entropy_Query
-1,18,Entropy,45.0,1,0,1,0,185,0,0
-2,18,Entropy,45.0,0,0,0,57,142,1,0
-3,137,SAC,49.0,3,3,0,34,138,9,1
+1,42,Entropy,49.0,0,0,0,0,200,0,0
+2,113,SAC,51.0,2,2,0,11,150,8,1
+3,153,SAC,137.0,0,0,0,62,137,1,0
